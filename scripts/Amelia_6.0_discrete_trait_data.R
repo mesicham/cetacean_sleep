@@ -668,6 +668,32 @@ artio_eyes <- merge(artio_eyes, lat.df, by = "tips", all = TRUE)
 write.csv(artio_eyes, here("artiodactyla_ecomorphology_dataset.csv"), row.names = FALSE)
 
 
+# Section: Cetacean_ecotrait_dataset -------------------------------------
+
+trait.data <- read.csv(here("cetacean_ecomorphology_dataset.csv"))
+
+trait.data <- trait.data %>% select(tips, Parvorder, Family, max_crep,
+                                    Orbit_ratio, Dive_depth_m, Mean_dive_depth_m, 
+                                    Body_mass_kg, Average_body_mass_kg, min_lat, max_lat, mean_lat)
 
 
 
+#save out the dive dataframe with sources
+url <- 'https://docs.google.com/spreadsheets/d/1_0ZS_tbddOCckkcKn9H5HpVRDZty4jhkUU20Nc0YYQY/edit?usp=sharing'
+dive_full <- read.csv(text=gsheet2text(url, format='csv'), stringsAsFactors=FALSE)
+
+dive_full <- dive_full %>% filter(!is.na(Max_dive_depth_m)) %>%
+  select(Species_name, Max_dive_depth_m, Alt_Max_1, Alt_Max_2, Alt_Max_3, Alt_Max_4, Source.1, Source.2, Source.3, Source.4, Source.5, Source.6)
+
+dive_full <- dive_full %>% mutate(Source1 = paste(dive_full$Max_dive_depth_m, dive_full$Source.1),
+                                  Source2 = paste(dive_full$Alt_Max_1, dive_full$Source.2),
+                                  Source3 = paste(dive_full$Alt_Max_2, dive_full$Source.3),
+                                  Source4 = paste(dive_full$Alt_Max_3, dive_full$Source.4),
+                                  Source5 = paste(dive_full$Alt_Max_4, dive_full$Source.5)) %>%
+  select(Species_name, Source1, Source2, Source3, Source4, Source5)
+
+dive_full <- dive_full %>% pivot_longer(!Species_name, names_to = "names", values_to = "values") %>%
+  select(Species_name, values) %>% separate(., values, into = c("Maximum_dive_depth", "Reference"), sep = " ") %>%
+  filter(Maximum_dive_depth != "NA") %>% arrange(Species_name)
+
+write.csv(dive_full, "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/dive_dataframe_with_sources.csv")

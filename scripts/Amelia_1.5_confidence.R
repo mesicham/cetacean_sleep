@@ -265,6 +265,59 @@ crep_df <- diel_full_long %>% group_by(Species_name) %>% do(tabulated_crep = tab
 
 crep_df <- crep_df[!is.na(crep_df$tabulated_crep),]
 
+#alternative method
+test <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Conf4")) %>% group_by(Species_name, column) %>% 
+  summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>% 
+  pivot_wider(id_cols = !c(sum_total, sum_crep), names_from = "column", values_from = percent_crep)
+
+test <- test %>% mutate(evidence1 = as.numeric(Conf1 >= 50), evidence2 = as.numeric(Conf2 >= 50), evidence3 = as.numeric(Conf3 >=50), evidence4 = as.numeric(Conf4 >=20)) %>%
+  mutate(total_evidence = sum(c_across(evidence1:evidence4),na.rm=TRUE), total_sources = sum(as.numeric(!is.na(c_across(evidence1:evidence4))))) %>%
+  mutate(tabulated_crep = case_when(total_evidence == 0 ~ "non",
+                                    total_evidence/total_sources > 0.5 ~ "crepuscular",
+                                    total_evidence/total_sources < 0.5 ~ "non",
+                                    #total_evidence/total_sources == 0.5 ~ "tie"))
+                                    #to break ties use the higher confidence level
+                                    total_sources == 2 & evidence4 == 0 ~ "non",
+                                    total_sources == 2 & evidence4 == 1 ~ "crepuscular",
+                                    total_sources == 2 & evidence3 == 1 & evidence2 == 0 ~ "crepuscular",
+                                    total_sources == 2 & evidence3 == 0 & evidence2 == 1 ~ "non",
+                                    total_sources == 2 & evidence3 == 1 & evidence1 == 0 ~ "crepuscular",
+                                    total_sources == 2 & evidence3 == 0 & evidence1 == 1 ~ "non",
+                                    total_sources == 2 & evidence2 == 1 & evidence1 == 0 ~ "crepuscular",
+                                    total_sources == 2 & evidence2 == 0 & evidence1 == 1  ~ "non"))
+
+
+matches <- crep_df[crep_df$Species_name %in% test$Species_name, "tabulated_crep"] == test[, c("tabulated_crep")]
+test[!matches,]
+
+#alternative method: what if I didn't average by category like the day-night pipeline
+test2 <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Conf4")) %>% group_by(Species_name) %>% 
+  summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>%
+  merge(., test[, c(1:5)], by = "Species_name") %>%
+  mutate(tabulated_crep = case_when(Conf4 >= 20 ~ "crepuscular",
+                                    percent_crep > 50  ~ "crepuscular",
+                                    percent_crep < 50  ~ "non",
+                                    #percent_crep == 50 ~ "tie" #when there is a tie use higher confidence source as tiebreaker
+                                    percent_crep == 50 & Conf3 >= 50 & Conf2 <= 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf3 <= 50 & Conf2 >= 50 ~ "non",
+                                    percent_crep == 50 & Conf3 >= 50 & Conf4 < 20 ~ "non",
+                                    percent_crep == 50 & Conf2 >= 50 & Conf1 < 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf2 <= 50 & Conf1 >= 50 ~ "non",
+                                    percent_crep == 50 & Conf4 >= 50 & Conf1 <= 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf4 <= 50 & Conf1 >= 50 ~ "non",
+                                    percent_crep == 50 & Conf3 >= 50 & Conf1 <= 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf3 <= 50 & Conf1 >= 50 ~ "non",
+                                    # #if the sources are in the same confidence level, evaluate to crep
+                                    percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf2 == 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf1 == 50 ~ "crepuscular"
+                                    ))
+
+matches <- crep_df[crep_df$Species_name %in% test2$Species_name, "tabulated_crep"] == test2[, c("tabulated_crep")]
+test2[!matches,]
+
+
 final_df <- merge(crep_df, activity_pattern_df, by = "Species_name")
 final_df$tabulated_diel <- final_df$tabulated_diel_pattern
 for(i in 1:nrow(final_df)){
@@ -523,16 +576,15 @@ dev.off()
 # Section 7: Sankey pipeline flowchart ------------------------------------------
 
 df <- data.frame(
-  step_8 = c(rep("A. Multiple category D \n sources in concordance?", 206)),
-  step_7 = c(rep("B. Return category \n D (n = 10)", 10), rep("C. Category D + E \n source majority?", 196)),
-  step_6 = c(rep(NA, 10), rep("D. Return category \n D + E (n = 1)", 1), rep("E. Category C + D + E \n source majority?", 195)),
-  step_5 = c(rep(NA, 11), rep("F. Return category \n C + D + E (n = 28)", 28), rep("G. Single category D \n source?", 167)),
-  step_4 = c(rep(NA, 39), rep("H. Return single category D \n source (n = 36)", 36), rep("I. Multiple category E \n source majority?", 131)),
-  step_3 = c(rep(NA, 75), rep("J. Return category E \n (n = 3)",3), rep("K. Multiple category C \n source majority?", 128)),
-  step_2 = c(rep(NA, 78), rep("L. Return category C \n (n = 64)", 64), rep("M. Single category C \n source?", 64)),
-  step_1 = c(rep(NA, 142), rep("N. Return single category C \n source (n = 6)", 6), rep("O. Category A + C + D + E \n source majority?", 58)),
-  step_0 = c(rep(NA, 148), rep("P. Return A + C \n + D + E (n = 51)",51), rep("Q. Else return \n cathemeral (n = 7)", 7))
-)
+  step_8 = c(rep("A. Multiple category D \n source majority?", 206)),
+  step_7 = c(rep("B. Return category D \n (n = 10)", 10), rep("C. Category D + E \n source majority?", 196)),
+  step_6 = c(rep(NA, 10), rep("D. Return category D + E \n (n = 1)", 1), rep("E. Category C + D + E \n source majority?", 195)),
+  step_5 = c(rep(NA, 11), rep("F. Return category C + D + E \n (n = 28)", 28), rep("G. Single category \n D source?", 167)),
+  step_4 = c(rep(NA, 39), rep("H. Return category D source \n (n = 36)", 36), rep("I. Multiple category E \n source majority?", 131)),
+  step_3 = c(rep(NA, 75), rep("J. Return category E (n = 3)",3), rep("K. Multiple category C \n source majority?", 128)),
+  step_2 = c(rep(NA, 78), rep("L. Return category C (n = 64)", 64), rep("M. Single category \n C source?", 64)),
+  step_1 = c(rep(NA, 142), rep("N. Return category C \n source (n = 6)", 6), rep("O. Category A + C + D + E \n source majority?", 58)),
+  step_0 = c(rep(NA, 148), rep("P. Return category A + C + D + E \n (n = 51)",51), rep("Q. Else return \n cathemeral (n = 7)", 7)))
 
 #convert to long format for geomsankey
 df <- df %>% make_long(step_0, step_1, step_2, step_3, step_4, step_5, step_6, step_7, step_8)
@@ -542,17 +594,53 @@ blues <- c("#010661", "#070E8A","#070E8A", "#0044A3","#0044A3", "#0070D1","#0070
 
 sankey_rum <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = node, label = substr(node, 4, 300))) +
   geom_sankey(flow.alpha= 0.5, node.color = 0.5) + geom_sankey_label(size = 3, color = 1, fill = "white")  + 
-  theme_sankey(base_size = 10) + scale_fill_manual(values = blues) +
+  theme_sankey(base_size = 10) + #scale_fill_manual(values = blues) +
+  scale_fill_manual(values = rep("transparent", 17)) +
   theme(legend.position = "none", axis.text.x = element_blank(), panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent', colour = NA)) + labs(x = NULL) 
 
 sankey_rum + coord_flip()
 
 #save out to figure folder
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ruminant_flowchart.pdf", height = 7, width = 5)
-sankey_rum + coord_flip() + scale_x_discrete(expand = expansion(add = .6))
-  
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/rum_sankey_plots.pdf", width =12, height = 5, bg = "transparent")
+(sankey_rum + coord_flip())
 dev.off()
 
+# Section 6: Crepuscularity sankey -------------------------------------------
+
+#create dataframe of the number of species that had activity patterns determined at each step
+df <- data.frame(
+  step_5 = c(rep("A. Category A + B + C + D \n source majority? ", 235)),
+  step_4 = c(rep("B. Yes \n (n = 123)", 123), rep("C. Tie \n (n = 28)", 28),
+             rep("D. No \n (n = 84)", 84)),
+  step_3 = c(rep("F. ", 123),
+             rep("G. Use source \n D > C > B > A", 19),
+             rep("H. Sources in \n same category", 9),
+             rep("I. Category D \n crepuscular evidence?", 84)),
+  step_2 = c(rep("K. Crepuscular \n (n = 138)", 123),
+             rep("K. Crepuscular \n (n = 138)", 6),
+             rep("L. Non-crepuscular \n (n = 97)", 13),
+             rep("K. Crepuscular \n (n = 138)", 9),
+             rep("L. Non-crepuscular \n (n = 97)", 84))
+)
+
+#convert to long format for geomsankey
+df <- df %>% make_long(step_2, step_3, step_4, step_5)
+df <- df[!is.na(df$node), ]
+
+#colours by nodes
+greens <- c("darkgreen", rep("darkgreen", 3), "orange", rep("green",3),"orange", "yellow") 
+
+sankey_crep_rum <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = node, label = substr(node, 4, 300))) +
+  geom_sankey(flow.alpha= 0.5, node.color = 0.5) + geom_sankey_label(size = 3, color = 1, fill = "white")  + 
+  theme_sankey(base_size = 11) +  scale_fill_manual(values = greens) +
+  theme(legend.position = "none", axis.text.x = element_blank(), panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent', colour = NA)) + labs(x = NULL) 
+
+sankey_crep_rum + coord_flip()  
+
+#save out to figure folder
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ruminant_crep_flowchart.pdf", height = 3.75, width = 4.3)
+sankey_crep_rum + coord_flip()
+dev.off()
 
 # Section 8: Comparison of artio data to Bennie and Maor data ---------------------------------------------
 
@@ -704,7 +792,7 @@ Baker_proportion
 dev.off()
 
 # Save out combined plots -------------------------------------------------
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_category_confusion_plots.pdf", width = 8.5, height = 4)
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_category_confusion_plots.pdf", width = 8.5, height = 3)
 plot_countfreq_cet + plot_countfreq_rum
 dev.off()
 
@@ -713,8 +801,89 @@ pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey
 #grid.arrange(sankey_cet + coord_flip(), plot_spacer(), sankey_rum + coord_flip(), nrow = 1)
 dev.off()
 
-
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_confusion_plots.pdf", width = 8.5, height = 11, bg = "transparent")
-(plot_countfreq_cet + plot_countfreq_rum)/
-  ((sankey_cet + coord_flip()) + (sankey_rum + coord_flip())) + plot_layout(height = c(3, 8))
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cet_sankey_plots.pdf", width = 4.25, height = 5, bg = "transparent")
+(sankey_cet + coord_flip())
 dev.off()
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/rum_sankey_plots.pdf", width = 4.25, height = 5, bg = "transparent")
+(sankey_rum + coord_flip())
+dev.off()
+
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots.pdf", width = 8.5, height = 5, bg = "transparent")
+(sankey_cet + coord_flip()) + plot_spacer() + (sankey_rum + coord_flip()) + plot_layout(width = c(5, 0.2, 5))
+#grid.arrange(sankey_cet + coord_flip(), plot_spacer(), sankey_rum + coord_flip(), nrow = 1)
+dev.off()
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_crep_plots.pdf", width = 8.5, height = 3.75, bg = "transparent")
+(sankey_crep_cet + coord_flip()) + plot_spacer() + (sankey_crep_cet + coord_flip()) + plot_layout(width = c(5, 0.2, 5))
+dev.off()
+
+
+# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_confusion_plots.pdf", width = 8.5, height = 11, bg = "transparent")
+# (plot_countfreq_cet + plot_countfreq_rum)/
+#   ((sankey_cet + coord_flip()) + (sankey_rum + coord_flip())) + plot_layout(height = c(3, 8))
+# dev.off()
+
+# Section 9: Cetacean and ruminant df with sources -------------------------------------
+
+#cetaceans
+url <- 'https://docs.google.com/spreadsheets/d/1eG_WIbhDzSv_g-PY90qpTMteESgPZZZt772g13v-H1o/edit?usp=sharing'
+sources <- read.csv(text=gsheet2text(url, format='csv'), stringsAsFactors=FALSE, na.strings="")
+
+sources <- sources[!is.na(sources$Source.1), c(1, 23:33)]
+
+sources$all_sources <- paste(sources$Source.1, sources$Source.2, sources$Source.3,sources$Source.4,sources$Source.5,sources$Source.6,sources$Source.7,sources$Source.8,sources$Source.9,sources$Source.10,sources$Source.11, sep = ";")
+cet_sources <- sources %>% mutate(all_sources = str_replace_all(all_sources, pattern = ";NA", replacement = "")) %>%
+  select(Species_name, all_sources) %>%  separate_longer_delim(all_sources, delim = ";")
+
+#give every source a unique reference number
+cet_sources$all_sources_numbered <- paste(1:nrow(cet_sources), cet_sources$all_sources, sep = ". ")
+cet_sources$numbered <- 1:nrow(cet_sources)
+
+cetacean_numbers <- cet_sources %>% select(Species_name, numbered) %>% pivot_wider(names_from = "Species_name", values_from = "numbered") %>% pivot_longer(everything(), names_to = "Species_name", values_to = "numbered")
+
+#replace sources in the dataset with their reference numbers
+cetaceans_full <- read.csv(here("cetaceans_full.csv"))
+
+cetaceans_full <- cetaceans_full[!is.na(cetaceans_full$Diel_Pattern), c(1, 3, 5:7)]
+
+cetaceans_full <- merge(cetaceans_full, cetacean_numbers, by = "Species_name")
+
+colnames(cetaceans_full) <- c("Species_name", "Suborder", "Family", "Activity_pattern", "Maximum_crepuscularity_activity_pattern", "References")
+
+
+#terrestrial artiodactyls
+url <- 'https://docs.google.com/spreadsheets/d/1JGC7NZE_S36-IgUWpXBYyl2sgnBHb40DGnwPg2_F40M/edit?gid=562902012#gid=562902012'
+sources <- read.csv(text=gsheet2text(url, format='csv'), stringsAsFactors=FALSE, na.strings = "")
+sources <- sources[!is.na(sources$Source.1), c(1, 26:32)]
+
+sources$all_sources <- paste(sources$Source.1, sources$Source.2, sources$Source.3,sources$Source.4,sources$Source.5,sources$Source.6,sources$Source.7, sep = ";")
+artio_sources <- sources %>% mutate(all_sources = str_replace_all(all_sources, pattern = ";NA", replacement = "")) %>%
+  select(Species_name, all_sources) %>% 
+  mutate(all_sources = str_replace(all_sources, pattern = "CO;2", replacement = "CO:2")) %>% #manually change links with a ; character
+  separate_longer_delim(all_sources, delim = ";") %>% 
+  mutate(all_sources = str_replace(all_sources, pattern = "CO:2", replacement = "CO;2"))#change the links back to a ;
+
+#give every source a unique reference number (starting from the end of the cetacean df)
+artio_sources$all_sources_numbered <- paste((max(cet_sources$numbered)+1):((max(cet_sources$numbered))+nrow(artio_sources)), artio_sources$all_sources, sep = ". ")
+artio_sources$numbered <- (max(cet_sources$numbered)+1):((max(cet_sources$numbered))+nrow(artio_sources))
+
+artio_numbers <- artio_sources %>% select(Species_name, numbered) %>% pivot_wider(names_from = "Species_name", values_from = "numbered") %>% pivot_longer(everything(), names_to = "Species_name", values_to = "numbered")
+
+artio_full <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv"))
+artio_full <- artio_full[!is.na(artio_full$Diel_Pattern), c(1, 3, 5:7)]
+
+artio_full <- merge(artio_full, artio_numbers, by = "Species_name")
+colnames(artio_full) <- c("Species_name", "Suborder", "Family", "Activity_pattern", "Maximum_crepuscularity_activity_pattern", "References")
+
+artio_full <- rbind(cetaceans_full, artio_full)
+artio_sources <- rbind(cet_sources, artio_sources) %>% select(Species_name, all_sources_numbered) 
+colnames(artio_sources) <- c("Species_name", "Reference")
+
+artio_full$References <- lapply(artio_full$References,as.numeric)
+artio_full <- artio_full %>% mutate(References = gsub("c(", "", References, fixed=TRUE)) %>%
+  mutate(References = gsub(")", "", References, fixed=TRUE))
+
+write.csv(artio_full, here("artiodactyla_with_sources.csv"), row.names = FALSE)
+write.csv(artio_sources, here("artiodactyla_references.csv"), row.names = FALSE)

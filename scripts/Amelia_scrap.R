@@ -1206,3 +1206,33 @@ pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/", "Maor
 test
 dev.off()
 
+
+# Section: old crepuscularity pipeline ------------------------------------
+
+df <- data.frame(
+  step_5 = c(rep("A. Total species (n = 84) ", 150)),
+  step_4 = c(rep("B. No sources, non-crepuscular (n = 76)", 8), rep("C. Level B, C, D sources", 142)),
+  step_3 = c(rep(NA, 8),
+             rep("D. Category B sources majority (n = 33)", 33),
+             rep("E. Category C sources majority (n = 70)", 70),
+             rep("F. Category D sources (n = 39)", 39)),
+  step_2 = c(rep(NA, 8),
+             rep("G. No evidence (n = 23)", 20),
+             rep("H. Crepuscular evidence (n = 10)", 13),
+             rep("I. No evidence (n = 67)", 48),
+             rep("J. Crepuscular evidence (n = 13)", 22),
+             rep("K. No evidence (n = 29)", 28),
+             rep("L. Crepuscular evidence (n = 10)", 11)),
+  step_1 = c(rep(NA, 8),
+             rep("M. Crepuscular evidence majority", 20),
+             rep("M. Crepuscular evidence majority", 13),
+             rep("M. Crepuscular evidence majority", 48),
+             rep("M. Crepuscular evidence majority", 22),
+             rep("M. Crepuscular evidence majority", 28),
+             rep("M. Crepuscular evidence majority", 11)),
+  step_0 = c(rep(NA, 8),
+             rep("N. Crepuscular", 36),
+             rep("O. Non-crepuscular", 88),
+             rep("P. Tie", 18))
+)
+

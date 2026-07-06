@@ -342,22 +342,52 @@ tabulateCrep = function(x){
 
 crep_df <- test_diel_long %>% group_by(Species_name) %>% do(tabulated_crep = tabulateCrep(.)) %>% unnest()
 
-#values for the crepuscularity pipeline flowchart
+#alternative method
 test <- test_diel_long %>% filter(column %in% c("Conf2", "Conf3", "Conf4")) %>% group_by(Species_name, column) %>% 
   summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>% 
   pivot_wider(id_cols = !c(sum_total, sum_crep), names_from = "column", values_from = percent_crep)
 
-test <- test %>% mutate(evidence2 = as.numeric(Conf2 >50), evidence3 = as.numeric(Conf3 >50), evidence4 = as.numeric(Conf4 >20)) %>%
-  mutate(total_evidence = evidence2 + evidence3 + evidence4)
+test <- test %>% mutate(evidence2 = as.numeric(Conf2 >= 50), evidence3 = as.numeric(Conf3 >=50), evidence4 = as.numeric(Conf4 >=20)) %>%
+  mutate(total_evidence = sum(c_across(evidence2:evidence4),na.rm=TRUE), total_sources = sum(as.numeric(!is.na(c_across(evidence2:evidence4))))) %>%
+  mutate(tabulated_crep = case_when(total_evidence == 0 ~ "non",
+                                    total_evidence >= 2 ~ "crepuscular",
+                                    total_evidence == 1 & total_sources == 1 ~ "crepuscular",
+                                    total_evidence == 1 & total_sources == 3 ~ "non",
+                                    #total_evidence == 1 & total_sources == 2 ~ "tie"))
+                                    #to break ties use the higher confidence level
+                                    total_sources == 2 & evidence4 == 1 ~ "crepuscular",
+                                    total_sources == 2 & evidence3 == 1 & evidence2 == 0 ~ "crepuscular",
+                                    total_sources == 2 & evidence3 == 1 & evidence4 == 0 ~ "non",
+                                    total_sources == 2 & evidence2 == 1 & evidence3 == 0 ~ "non"))
 
-table(test$evidence4)
+matches <- crep_df[crep_df$Species_name %in% test$Species_name, "tabulated_crep"] == test[, c("tabulated_crep")]
+test[!matches,]
 
+#alternative method: what if I didn't average by category like the day-night pipeline
+test2 <- test_diel_long %>% filter(column %in% c("Conf2", "Conf3", "Conf4", "Conf5")) %>% group_by(Species_name) %>% 
+  summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>%
+  merge(., test[, c(1:4)], by = "Species_name") %>%
+  mutate(tabulated_crep = case_when(Conf4 >= 20 ~ "crepuscular",
+                                    percent_crep > 50  ~ "crepuscular",
+                                    percent_crep < 50  ~ "non",
+                                    #percent_crep == 50 ~ "tie" #when there is a tie use higher confidence source as tiebreaker
+                                    percent_crep == 50 & Conf3 >= 50 & Conf2 <= 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf3 <= 50 & Conf2 >= 50 ~ "non",
+                                    percent_crep == 50 & Conf3 >= 50 & Conf4 < 20 ~ "non",
+                                    #if the sources are in the same confidence level, evaluate to crep
+                                    percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
+                                    percent_crep == 50 & Conf2 == 50 ~ "crepuscular"
+                                    ))
+
+matches <- crep_df[crep_df$Species_name %in% test2$Species_name, "tabulated_crep"] == test2[, c("tabulated_crep")]
+test2[!matches,]
 
 final_df <- merge(crep_df, activity_pattern_df, by = "Species_name")
 final_df$tabulated_diel <- final_df$tabulated_diel_pattern
 for(i in 1:nrow(final_df)){
   if(final_df[i, "tabulated_crep"] == "crepuscular"){
-    final_df[i, "tabulated_diel"] <- paste(test[i, "tabulated_diel_pattern"], "crepuscular", sep = "/")
+    final_df[i, "tabulated_diel"] <- paste(activity_pattern_df[i, "tabulated_diel_pattern"], "crepuscular", sep = "/")
   }
 }
 
@@ -583,14 +613,13 @@ dev.off()
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(
-  step_6 = c(rep("A. Multiple category D \n sources in concordance?",82)),
-  step_5 = c(rep("B. Return category D \n (n = 26)", 26), rep("C. Category D + C \n in concordance?", 56)),
-  step_4 = c(rep(NA, 26), rep("D. Return category D + C \n (n = 25)", 25), rep("E. Single category D source?", 31)),
-  step_3 = c(rep(NA, 51), rep("F. Return single cateory D  \n (n = 5)", 5), rep("G. Single category C source?", 26)),
-  step_2 = c(rep(NA, 56), rep("H. Return single category C \n (n = 13)", 13), rep("I. Category E + D + C \n sources in concordance?", 13)),
-  step_1 = c(rep(NA, 69), rep("J. Return category E + D \n + C (n = 1)", 1), rep("K. Multiple category C, D, or E \n sources in concordance?", 12)),
-  step_0 = c(rep(NA, 70), rep("L. Return category A \n (n = 7)", 7), rep("M. Else return \n cathemeral (n = 5)", 5))
-)
+  step_6 = c(rep("A. Multiple category D \n source majority",82)),
+  step_5 = c(rep("B. Return category D \n (n = 26)", 26), rep("C. Category D + C \n source majority?", 56)),
+  step_4 = c(rep(NA, 26), rep("D. Return category D + C \n (n = 25)", 25), rep("E. Single category \n D source?", 31)),
+  step_3 = c(rep(NA, 51), rep("F. Return category D  \n (n = 5)", 5), rep("G. Single category \n C source?", 26)),
+  step_2 = c(rep(NA, 56), rep("H. Return category C \n (n = 13)", 13), rep("I. Category E + D + C \n source majority?", 13)),
+  step_1 = c(rep(NA, 69), rep("J. Return category E + D + C \n (n = 1)", 1), rep("K. Category A + E + D + C \n source majority?", 12)),
+  step_0 = c(rep(NA, 70), rep("L. Return category A + E + D + C \n (n = 7)", 7), rep("M. Else return \n cathemeral (n = 5)", 5)))
 
 #convert to long format for geomsankey
 df <- df %>% make_long(step_0, step_1, step_2, step_3, step_4, step_5, step_6)
@@ -603,39 +632,49 @@ sankey_cet <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = ne
   theme_sankey(base_size = 11) + scale_fill_manual(values = blues) +
   theme(legend.position = "none", axis.text.x = element_blank(), panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent', colour = NA)) + labs(x = NULL) 
 
-sankey_cet
+sankey_cet + coord_flip()
 
 #save out to figure folder
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/", "cetacean_flowchart.pdf"), height = 7, width = 14)
-sankey_cet
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cet_sankey_plots.pdf", width = 4.25, height = 5, bg = "transparent")
+(sankey_cet + coord_flip())
 dev.off()
+
 # Section 6: Crepuscularity sankey -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(
-  step_4 = c(rep("A. Total species (n = 84) ",84)),
-  step_3 = c(rep("B. No sources, non-crepuscular (n = 76)", 8), rep("C. Level B, C, D sources", 76)),
-  step_2 = c(rep(NA, 8), rep("D. Category B sources majority (n = 70)", 32), rep("E. Category C sources majority (n = 33)", 22), rep("F. Category D sources (n = 39)", 22)),
-  step_1 = c(rep(NA, 8), rep("G. No evidence (n = 23)", 20), rep("H. Crepuscular evidence (n = 10)", 12), rep("I. No evidence (n = 67)", 10), rep("J. Crepuscular evidence (n = 13)", 12), rep("K. No evidence (n = 29)", 10), rep("L. Crepuscular evidence (n = 10)", 12))
-  #step_0 = c(rep(NA, 8), rep("M. Non-crepuscular (n = 53)", 53), rep("N. Crepuscular (n = 23)", 23))
-  )
+  step_5 = c(rep("A. Category B + C + D \n source majority? ", 84)),
+  step_4 = c(rep("B. Yes \n (n = 12)", 12), rep("C. Tie \n (n = 7)", 7),
+             rep("D. No \n (n = 57)", 57), 
+             rep("E. Category A + E \n sources (n = 8)",8)),
+  step_3 = c(rep("F. ", 12),
+             rep("G. Use source \n D > C > B", 4),
+             rep("H. Sources in \n same \n category", 3),
+             rep("I. Category D \n crepuscular evidence?", 57),
+             rep("J. ", 8)),
+  step_2 = c(rep("K. Crepuscular \n (n = 23)", 12),
+             rep("K. Crepuscular \n (n = 23)", 2),
+             rep("L. Non-crepuscular \n (n = 61)", 2),
+             rep("K. Crepuscular \n (n = 23)", 3),
+             rep("K. Crepuscular \n (n = 23)", 6),
+             rep("L. Non-crepuscular \n (n = 61)", 51),
+             rep("L. Non-crepuscular \n (n = 61)", 8)))
 
 #convert to long format for geomsankey
-df <- df %>% make_long(step_1, step_2, step_3, step_4)
+df <- df %>% make_long(step_2, step_3, step_4, step_5)
 df <- df[!is.na(df$node), ]
 
-blues <- c("#010661", "#070E8A","#070E8A", "#0044A3","#0044A3", "#0070D1","#0070D1","#2E9DFF","#2E9DFF","#8AC8FF","#8AC8FF","#B8DEFF","#B8DEFF")
+#colours by nodes
+greens <- c("darkgreen", rep("darkgreen", 4), "orange", rep("green",3), "yellow", "orange", "yellow") 
 
 sankey_crep_cet <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = node, label = substr(node, 4, 300))) +
   geom_sankey(flow.alpha= 0.5, node.color = 0.5) + geom_sankey_label(size = 3, color = 1, fill = "white")  + 
-  theme_sankey(base_size = 11) +  scale_fill_manual(values = blues) +
+  theme_sankey(base_size = 11) +  scale_fill_manual(values = greens) +
   theme(legend.position = "none", axis.text.x = element_blank(), panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent', colour = NA)) + labs(x = NULL) 
 
 sankey_crep_cet + coord_flip()
 
 #save out to figure folder
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/", "cetacean_flowchart.pdf"), height = 7, width = 14)
-sankey_cet
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacean_crep_flowchart.pdf", height = 3.75, width = 14.3)
+sankey_crep_cet + coord_flip()
 dev.off()
-
-

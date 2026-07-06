@@ -61,7 +61,7 @@ phylANOVA <- calculatePhylANOVA(trait.data.1, "Orbit_ratio")
 cet_orbit_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = Orbit_ratio)) + 
   boxplot_format +
   labs(x = "Temporal activity pattern", y = "Relative eye size") + 
-  annotate("text", x = 1.4, y = 40, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
+  annotate("text", x = 1.4, y = 43, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
 cet_orbit_boxplot
 
@@ -142,7 +142,7 @@ phylANOVA <- calculatePhylANOVA(trait.data.1, "Dive_depth_m")
 cet_dive_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = log(Dive_depth_m))) + 
   boxplot_format +
   labs(x = "Temporal activity pattern", y = "Log (maximum dive depth (m))") + 
-  annotate("text", x = 1.4, y = 9, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
+  annotate("text", x = 1.4, y = 9.5, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
 cet_dive_boxplot
 
@@ -173,7 +173,7 @@ phylANOVA <- calculatePhylANOVA(trait.data.art.subset, "Orbit_ratio")
 stat.test <- data.frame(group1 = c("crepuscular", "crepuscular", "diurnal"),
                         group2 = c("diurnal", "nocturnal", "nocturnal"),
                         p.adj = c(phylANOVA$Pt[2], phylANOVA$Pt[3], phylANOVA$Pt[6]),
-                        y.position = c(0.985, 0.991, 0.999))
+                        y.position = c(0.981, 0.990, 0.999))
 
 stat.test <- stat.test %>% add_x_position(x = "max_crep")
 stat.test <- stat.test %>% mutate(xmin = xmin + 1, xmax = xmax + 1)
@@ -208,7 +208,7 @@ phylANOVA <- calculatePhylANOVA(trait.data.art, "mean_lat")
 stat.test <- data.frame(group1 = c("cathemeral", "cathemeral", "cathemeral", "crepuscular", "crepuscular", "diurnal"),
                         group2 = c("crepuscular", "diurnal", "nocturnal", "diurnal", "nocturnal", "nocturnal"),
                         p.adj = c(phylANOVA$Pt[2], phylANOVA$Pt[3], phylANOVA$Pt[4], phylANOVA$Pt[7], phylANOVA$Pt[8], phylANOVA$Pt[12]),
-                        y.position = c(80, 90, 100, 110, 120, 135))
+                        y.position = c(80, 93, 106, 119, 133, 152))
 
 stat.test <- stat.test %>% add_x_position(x = "max_crep")
 
@@ -216,7 +216,7 @@ rum_lat_boxplot <- ggplot(trait.data.art, aes(x = max_crep, y = mean_lat)) +
   boxplot_format +
   stat_pvalue_manual(stat.test, label = "p.adj", hjust = 0.7, size = 3) +
   labs(x = "Temporal activity pattern", y = "Mean latitude range") + 
-  annotate("text", x = 1.4, y = 140, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
+  annotate("text", x = 1.4, y = 152, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
 rum_lat_boxplot
 
@@ -299,18 +299,22 @@ boxplots #+ plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(si
 dev.off()
 
 #alternative plot arrangement
-rum_boxplots <- (rum_orbit_boxplot + rum_lat_boxplot + plot_spacer()) 
- 
-cet_boxplots <- (cet_orbit_boxplot + cet_lat_boxplot + cet_dive_boxplot) 
-  
+rum_boxplots <- (rum_orbit_boxplot + expand_limits(y = 1.005) + theme(axis.title.x = element_text(colour = "white")))/
+  (rum_lat_boxplot + expand_limits(y = 160)) 
+rum_boxplots
+
+cet_boxplots <- (cet_orbit_boxplot + expand_limits(y = 45) + theme(axis.title.x = element_text(colour = "white")))/
+  (cet_lat_boxplot + expand_limits(y = 108) + theme(axis.title.x = element_text(colour = "white"))) / 
+  (cet_dive_boxplot + expand_limits(y = 10)) 
+cet_boxplots
 #plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(size = 14), axis.title.x = element_blank(), axis.text.x = element_blank())
 
 
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/rum_ecomorphological_boxplots.pdf"), width = 8.5, height = 4, bg = "transparent")
+pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/rum_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
 rum_boxplots
 dev.off()
 
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cet_ecomorphological_boxplots.pdf"), width = 8.5, height = 3, bg = "transparent")
+pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cet_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
 cet_boxplots
 dev.off()
 

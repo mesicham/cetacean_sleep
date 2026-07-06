@@ -317,8 +317,8 @@ library(FactoMineR)
 #install.packages("factoextra")
 library(factoextra)
 
-filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
-#filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
 #filename <- "august_artiodactyla_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
 
 #requires the filename, the number of states in the model and the number of Mk models 
@@ -326,7 +326,7 @@ filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_br
 rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
 
 #filter by the model you're plotting
-rates_df1 <- rates_df %>% filter(model == "ARD") 
+rates_df1 <- rates_df %>% filter(model == "Bridge_only") 
 
 #convert to needed format, every row is a model, every column is a transition rate
 rates_df1$model_number <- rep(1:1000, each = (nrow(rates_df1)/1000))
@@ -335,7 +335,7 @@ rates.mx <- rates_df1 %>% select(rates, solution, model_number) %>%
   select(-model_number) %>%
   as.matrix()
 
-#to get the cluster for each transition instead of each tree
+#to get the cluster for each transition instead of each tree, this makes less sense
 #rates.mx <- t(rates.mx)
 
 #determine the optimal number of clusters (12 for the 12 transition rates?)
@@ -353,7 +353,7 @@ set.seed(123)
 # Generate our k-means analysis
 rates.km <- 
   kmeans(scale(rates.mx), # We'll scale our data for this 
-         centers = 3, 
+         centers = 4, 
          nstart = 25,
          iter.max = 500)
 
@@ -394,39 +394,31 @@ rates.var <- get_pca_var(rates_scaled.pca)
 # Compare how our variables contribute and correlate with PC1/PC2
 fviz_pca_var(X = rates_scaled.pca, 
              col.var = "contrib", # How will we colour our data/lines
-             gradient.cols = c("green", "yellow", "red"), 
+             gradient.cols = c("green", "gold", "red"), 
              labelsize = 6,
              repel = TRUE, # make sure text doesn't overlap
-             axes = c(1,2) # Determine which PCs you want to graph
+             axes = c(3,4) # Determine which PCs you want to graph
 ) + 
-  theme(text = element_text(size=10))
+  theme(text = element_text(size=7))
 
 
 # Graph our scaled PCA data.
 fviz_pca_ind(rates_scaled.pca, 
              #repel = TRUE, # avoid overlapping text points
-             labelsize = 5, 
-             axes = c(1,2) #chose which principal components 
-) + 
-  
-  theme(text = element_text(size=7)) # Make our text larger
+             labelsize = 2, 
+             axes = c(3,4) #chose which principal components 
+) + theme(text = element_text(size=6)) # Make our text larger
 
 #extract the individual trees from each cluster
-rates.km$cluster
-
 #since the input is the transition rates from each tree (1-1000) numbering the results will give the correct model number
 model_clusters <- data.frame(cluster = rates.km$cluster, model_number = 1:1000)
 
-#Cluster 1 contains: 74 trees
-#Cluster 2 contains: 923 trees
-#Cluster 3 contains: 3 trees (480, 505, 797)
-
 #plot the rates from only these trees
 
-filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
 rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
 
-model_selection <- "ARD"
+model_selection <- "Bridge_only"
 
 #filter by the model you're plotting
 rates_df1 <- rates_df %>% filter(model == model_selection) 
@@ -435,7 +427,7 @@ rates_df1 <- rates_df %>% filter(model == model_selection)
 rates_df1$model_number <- rep(1:1000, each = (nrow(rates_df1)/1000))
 
 #extract the list of tree numbers
-cluster_list <- model_clusters %>% filter(cluster == 2) %>% pull(model_number)
+cluster_list <- model_clusters %>% filter(cluster == 4) %>% pull(model_number)
 
 #filter for the trees in the PCA cluster
 rates_df1 <- rates_df1 %>% filter(model_number %in% cluster_list)
@@ -465,24 +457,74 @@ rates_plot <-
 
 rates_plot
 
+#look at the structure of each tree
 
-#install.packages("ggraph")
-library(ggraph)
-library(igraph)
+#filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+model_results_all <- readRDS(here(filename))
 
-graph <- graph_from_data_frame(highschool)
+plotMKmodel(model_results_all$bridge_only_model[887]$UNTITLED)
 
-# Not specifying the layout - defaults to "auto"
-ggraph(graph) + 
-  geom_edge_link(aes(colour = factor(year))) + 
-  geom_node_point()
+model_results <- model_results_all$bridge_only_model[678]$UNTITLED
+  
+lik.anc <- as.data.frame(rbind(model_results$tip.states, model_results$states))
+colnames(lik.anc) <- c("cathemeral", "crepuscular", "diurnal", "nocturnal")
+phylo_tree <- model_results$phy
 
-rates_subset <- rates_df1[, c( "start_state", "end_state", "rates")]
-graph <- graph_from_data_frame(rates_subset)
+#save out tree
+png("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\Amelia_figures\\example_tree_678.png", width = 40, height = 8, units = "cm", res = 800)
+ggtree(phylo_tree, layout = "rectangular") + geom_tiplab(size = 1.3)
+dev.off() 
 
-ggraph(graph) + 
-  geom_edge_link(aes(colour = rates)) + 
-  geom_node_point()
+#associate each of these species and their trait states with its node
+lik.anc$node <- c(1:length(phylo_tree$tip.label), (length(phylo_tree$tip.label) + 1):(phylo_tree$Nnode + length(phylo_tree$tip.label)))
+
+#plot the ancestral reconstruction, displaying each of the three trait states (cathemeral, diurnal, nocturnal)
+ancestral_plot_di <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = diurnal) + geom_tippoint(aes(color = diurnal), shape = 16, size = 1.5) + scale_color_distiller(palette = "OrRd", direction = 1)  + geom_tiplab(color = "black", size = 3, offset = 0.5) + geom_tippoint(aes(color = diurnal), shape = 16, size = 1.5)
+ancestral_plot_di
+ancestral_plot_noc <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = nocturnal) + geom_tippoint(aes(color = nocturnal), shape = 16, size = 1.5)+ scale_color_distiller(palette = "GnBu", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = nocturnal), shape = 16, size = 1.5)
+ancestral_plot_noc
+ancestral_plot_cath <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = cathemeral) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5) + scale_color_distiller(palette = "RdPu", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5)
+ancestral_plot_cath
+ancestral_plot_crep <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = crepuscular) + geom_tippoint(aes(color = crepuscular), shape = 16, size = 1.5) + scale_color_distiller(palette = "Greens", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5)
+ancestral_plot_crep
+
+#as pie charts 
+colnames(model_results$data) <- c("tips", "Diel_Pattern")
+
+#to make more clear we can colour the tips separately using geom_tipppoint 
+#may have to adjust what trait data column is called in each
+base_tree <- ggtree(phylo_tree, layout = "rectangular") + geom_tiplab(size = 2, hjust = -0.1)
+base_tree <- base_tree %<+% model_results$data[, c("tips", "Diel_Pattern")]
+base_tree <- base_tree + geom_tippoint(aes(color = Diel_Pattern), size = 3) 
+base_tree
+
+#make the dataframe of likelihoods at the internal nodes without the tips
+lik.anc <- as.data.frame(model_results$states)
+lik.anc$node <- c(1:nrow(lik.anc)) + nrow(model_results$data)
+
+#get the pie charts from this database using nodepie
+#the number of columns changes depending on how many trait states
+pie <- nodepie(lik.anc, 1:(length(lik.anc)-1))
+
+pie_tree <- base_tree + geom_inset(pie, width = .03, height = .03) 
+pie_tree 
+
+png("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\Amelia_figures\\example_tree_496.png", width = 40, height = 8, units = "cm", res = 800)
+pie_tree + theme(legend.position = "none")
+dev.off() 
+
+mammal_trees <- read.nexus(here("Cox_mammal_data/Complete_phylogeny.nex"))
+trait.data <- model_results_all$bridge_only_model[4]$UNTITLED$data
+phylo_trees <- lapply(mammal_trees, function(x) subsetTrees(tree = x, subset_names = trait.data$tips))
+
+cluster_list <- model_clusters %>% filter(cluster == 1) %>% pull(model_number)
+subset_trees <- phylo_trees[cluster_list]
+
+ggdensitree(subset_trees, layout = "rectangular")
+
+ggtree(phylo_trees[4]$UNTITLED)
+ggtree(model_results_all$bridge_only_model[4]$UNTITLED$phy)
 
 # Section 8: density rate plots ----------------------------------------
 
