@@ -43,9 +43,8 @@ boxplot_theme <-  theme_minimal() +
 #save out the standard plot elements
 boxplot_format <- list(geom_boxplot(aes(fill = max_crep), alpha = 0.5, outlier.shape = NA),
                        scale_fill_manual(values = custom.colours, guide = "none"),
-                       geom_jitter(aes(fill = max_crep), size = 4, width = 0.1, height = 0, colour = "black", pch = 21, alpha = 0.8), boxplot_theme,
+                       geom_jitter(aes(fill = max_crep), size = 3, width = 0.1, height = 0, colour = "black", pch = 21, alpha = 0.8), boxplot_theme,
                        scale_x_discrete(labels = c("cathemeral" = "Cathemeral", "crepuscular" = "Crepuscular", "diurnal" = "Diurnal", "nocturnal" = "Nocturnal")))
-
 
 # Cetacean orbit ratio ----------------------------------------------------
 
@@ -294,9 +293,9 @@ boxplots
 #boxplots <- (rum_orbit_boxplot/ rum_lat_boxplot/plot_spacer()) | (cet_orbit_boxplot/cet_lat_boxplot/cet_dive_boxplot)
 boxplots <- (rum_orbit_boxplot/ rum_lat_boxplot) | (cet_orbit_boxplot/cet_lat_boxplot/cet_dive_boxplot) 
 
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ecomorphological_boxplots.pdf"), width = 8.5, height = 7, bg = "transparent")
-boxplots #+ plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(size = 14))
-dev.off()
+# pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ecomorphological_boxplots.pdf"), width = 8.5, height = 7, bg = "transparent")
+# boxplots #+ plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(size = 14))
+# dev.off()
 
 #alternative plot arrangement
 rum_boxplots <- (rum_orbit_boxplot + expand_limits(y = 1.005) + theme(axis.title.x = element_text(colour = "white")))/
@@ -317,6 +316,4 @@ dev.off()
 pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cet_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
 cet_boxplots
 dev.off()
-
-
 

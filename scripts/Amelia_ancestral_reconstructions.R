@@ -45,7 +45,7 @@ source("scripts/Amelia_functions.R")
 
 #currently I have max_clade_crep data for: artio max_crep, artio max_dinoc
 #to do: cetacean max_crep, cetacean max_dinoc, artio w/out cetaceans max_crep, artio w/out cetaceans max_dinoc
-all_model_results <- readRDS(here("whippomorpha_max_clade_cred_four_state_max_crep_traits_ER_SYM_ARD_bridge_only_models.rds"))
+all_model_results <- readRDS(here("whippomorpha_june_2026_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"))
 #copy and paste first half of filename here (leave out the models)
 file_name <- "whippomorpha_max_clade_cred_four_state_max_crep_traits_ER_SYM_ARD_bridge_only_models"
 
@@ -58,11 +58,11 @@ file_name <- "whippomorpha_max_clade_cred_four_state_max_crep_traits_ER_SYM_ARD_
 #model_results <- all_model_results$SYM_model
 #model_name <- "SYM"
 
-model_results <- all_model_results$ARD_model
-model_name <- "ARD"
+# model_results <- all_model_results$ARD_model
+# model_name <- "ARD"
 
-# model_results <- all_model_results$bridge_only
-# model_name <- "bridge_only"
+model_results <- all_model_results$bridge_only
+model_name <- "bridge_only"
 
 # Section 1: Plotting ancestral reconstruction from corHMM model  --------
 
@@ -77,14 +77,13 @@ lik.anc$node <- c(1:length(phylo_tree$tip.label), (length(phylo_tree$tip.label) 
 
 #plot the ancestral reconstruction, displaying each of the three trait states (cathemeral, diurnal, nocturnal)
 ancestral_plot_di <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = diurnal) + geom_tippoint(aes(color = diurnal), shape = 16, size = 1.5) + scale_color_distiller(palette = "OrRd", direction = 1)  + geom_tiplab(color = "black", size = 3, offset = 0.5) + geom_tippoint(aes(color = diurnal), shape = 16, size = 1.5)
-ancestral_plot_di
 ancestral_plot_noc <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = nocturnal) + geom_tippoint(aes(color = nocturnal), shape = 16, size = 1.5)+ scale_color_distiller(palette = "GnBu", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = nocturnal), shape = 16, size = 1.5)
-ancestral_plot_noc
 ancestral_plot_cath <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = cathemeral) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5) + scale_color_distiller(palette = "RdPu", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5)
-ancestral_plot_cath
-
 ancestral_plot_crep <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = crepuscular) + geom_tippoint(aes(color = crepuscular), shape = 16, size = 1.5) + scale_color_distiller(palette = "Greens", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5)
-ancestral_plot_crep
+
+
+(ancestral_plot_di + ancestral_plot_noc)/
+  (ancestral_plot_cath + ancestral_plot_crep)
 
 #create the name of the file by pasting together ancestral recon, the diel state and the file_name 
 png(paste("C:/Users/ameli/OneDrive/Documents/R_projects/New_ancestral_recon/", "ancestral_recon_diurnal_", file_name, "_", model_name, ".png", sep = ""), width=17,height=16, units="cm",res=1200)
@@ -173,11 +172,9 @@ pie_tree
 
 # # Pie chart ancestral reconstruction ------------------------------------
 
-#load in ARD model data
-all_model_results <- readRDS(here("whippomorpha_max_clade_cred_four_state_max_crep_traits_ER_SYM_ARD_bridge_only_models.rds"))
-model_results <- all_model_results$ARD_model
-file_name <- "whippomorpha_max_clade_cred_four_state_max_crep_traits_ARD"
-
+#load in model data
+all_model_results <- readRDS(here("whippomorpha_june_2026_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"))
+model_results <- all_model_results$bridge_only_model
 phylo_tree <- model_results$phy
 
 #rename column names for consistency in the next steps
@@ -185,10 +182,10 @@ colnames(model_results$data) <- c("tips", "Diel_Pattern")
 
 #to make more clear we can colour the tips separately using geom_tipppoint 
 #may have to adjust what trait data column is called in each
-base_tree <- ggtree(phylo_tree, layout = "rectangular") + geom_tiplab(size = 2, hjust = -0.1)
+base_tree <- ggtree(phylo_tree, layout = "rectangular")# + geom_tiplab(size = 2, hjust = -0.1)
 base_tree <- base_tree %<+% model_results$data[, c("tips", "Diel_Pattern")]
-base_tree <- base_tree + geom_tippoint(aes(color = Diel_Pattern), size = 3) 
-base_tree
+base_tree <- base_tree + geom_tippoint(aes(color = Diel_Pattern), size = 3) + theme(legend.position = "bottom") +
+  scale_colour_manual(values = custom.colours)
 
 #make the dataframe of likelihoods at the internal nodes without the tips
 lik.anc <- as.data.frame(model_results$states)
@@ -201,18 +198,44 @@ lik.anc$node <- c(1:nrow(lik.anc)) + nrow(model_results$data)
 
 #get the pie charts from this database using nodepie
 #the number of columns changes depending on how many trait states
-pie <- nodepie(lik.anc, 1:(length(lik.anc)-1))
+pie <- nodepie(lik.anc, 1:(length(lik.anc)-1), color = c("darkorange1","blue", "red", "green"))
 
 pie_tree <- base_tree + geom_inset(pie, width = .03, height = .03) 
 #this adds a the timescale for the entire tree
-pie_tree <- pie_tree + theme_tree2()
-#reverses the timescale so it starts at 0mya at the tips and extends back to 50mya at ancestor
-pie_tree <- revts(pie_tree)
+# pie_tree <- pie_tree + theme_tree2()
+# #reverses the timescale so it starts at 0mya at the tips and extends back to 50mya at ancestor
+# pie_tree <- revts(pie_tree)
+
 pie_tree
 
+#open the tree
+base_tree <- open_tree(base_tree, 180)
+
+
+library(ggpp)
+#instead of geom_inset use geom_plot
+base_tree <- ggtree(phylo_tree, layout = "rectangular")# + geom_tiplab(size = 2, hjust = -0.1)
+base_tree <- base_tree %<+% model_results$data[, c("tips", "Diel_Pattern")]
+base_tree <- base_tree + geom_tippoint(aes(color = Diel_Pattern), size = 4) + theme(legend.position = "bottom") +
+  scale_colour_manual(values = custom.colours)
+
+custom.colours <- c("#dd8ae7","#EECBAD", "#FC8D62", "#66C2A5")
+
+lik.anc <- as.data.frame(model_results$states)
+lik.anc$node <- c(1:nrow(lik.anc)) + nrow(model_results$data)
+pie <- nodepie(lik.anc, 1:(length(lik.anc)-1), color = c("#dd8ae7","#EECBAD", "#FC8D62", "#66C2A5"))
+
+#can also use a rectangular tree and open it with the below function
+base_tree <- open_tree(base_tree, 180)
+
+df <- tibble::tibble(node=as.numeric(lik.anc$node), pie=pie)
+base_tree <- base_tree %<+% df
+base_tree <- base_tree + geom_plot(data = td_filter(!isTip), mapping=aes(x=x,y=y, label=pie), vp.width=0.02, vp.height=0.02, hjust=0.5, vjust=0.5)
+base_tree
+
 #save out
-png(paste("C:/Users/ameli/OneDrive/Documents/R_projects/New_ancestral_recon/pie_chart/", "pie_chart_anc_recon_", file_name, ".png", sep = ""), width=40,height=20, units="cm",res=600)
-pie_tree
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/pie_chart_anc_recon_whippo_ARD_bridge_2.pdf", width=10, height=10)
+base_tree
 dev.off()
 
 

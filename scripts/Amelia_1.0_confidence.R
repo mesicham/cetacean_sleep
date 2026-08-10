@@ -594,7 +594,9 @@ table2$count <- table
 
 #want to make a plot that has both the frequency and the counts
 table2$freq_count <- paste0((round(table2$Freq, 2) * 100), "%", "\n", "(n=", table2$count, ")")
-plot_countfreq_cet <- table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>% 
+plot_countfreq_cet_myst <-  
+  table2[c(1:4, 5:7, 10:12, 16:17, 21), ] %>% #for odontocetes
+  #table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>% 
   ggplot(., aes(x = Comp1, y = Comp2, fill = Freq, label = freq_count)) +
   geom_tile() + geom_text(size = 3) + scale_fill_viridis(begin = 0.2, end = 1, limits = c(1,0)) + 
   theme_minimal() + ylab("Primary source category") + xlab("Secondary source category") +
@@ -602,24 +604,27 @@ plot_countfreq_cet <- table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>%
   scale_y_discrete(labels = c("A", "B", "C", "D", "E")) +
   theme(legend.position = "none")
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance.pdf", width = 7, height = 7, bg = "transparent")
+#pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance.pdf", width = 7, height = 7, bg = "transparent")
 #pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance_odontoceti.pdf", width = 7, height = 7, bg = "transparent")
 #pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance_mysticeti.pdf", width = 7, height = 7, bg = "transparent")
 plot_countfreq_cet
-dev.off()
+#dev.off()
 
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/parvorder_category_confusion_plots.pdf", width = 8.5, height = 3)
+plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
+dev.off()
 
 # Section 5: Concordance sankey -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(
-  step_6 = c(rep("A. Multiple category D \n source majority",82)),
-  step_5 = c(rep("B. Return category D \n (n = 26)", 26), rep("C. Category D + C \n source majority?", 56)),
-  step_4 = c(rep(NA, 26), rep("D. Return category D + C \n (n = 25)", 25), rep("E. Single category \n D source?", 31)),
-  step_3 = c(rep(NA, 51), rep("F. Return category D  \n (n = 5)", 5), rep("G. Single category \n C source?", 26)),
-  step_2 = c(rep(NA, 56), rep("H. Return category C \n (n = 13)", 13), rep("I. Category E + D + C \n source majority?", 13)),
-  step_1 = c(rep(NA, 69), rep("J. Return category E + D + C \n (n = 1)", 1), rep("K. Category A + E + D + C \n source majority?", 12)),
-  step_0 = c(rep(NA, 70), rep("L. Return category A + E + D + C \n (n = 7)", 7), rep("M. Else return \n cathemeral (n = 5)", 5)))
+  step_6 = c(rep("A. Multiple category D \n source majority",84)),
+  step_5 = c(rep("B. Return category D \n (n = 26)", 26), rep("C. Category D + C \n source majority?", 58)),
+  step_4 = c(rep(NA, 26), rep("D. Return category D + C \n (n = 25)", 25), rep("E. Single category \n D source?", 33)),
+  step_3 = c(rep(NA, 51), rep("F. Return category D  \n (n = 5)", 5), rep("G. Single category \n C source?", 28)),
+  step_2 = c(rep(NA, 56), rep("H. Return category C \n (n = 13)", 13), rep("I. Category E + D + C \n source majority?", 15)),
+  step_1 = c(rep(NA, 69), rep("J. Return category E + D + C \n (n = 1)", 1), rep("K. Category A + E + D + C \n source majority?", 14)),
+  step_0 = c(rep(NA, 70), rep("L. Return category A + E + D + C \n (n = 9)", 9), rep("M. Else return \n cathemeral (n = 5)", 5)))
 
 #convert to long format for geomsankey
 df <- df %>% make_long(step_0, step_1, step_2, step_3, step_4, step_5, step_6)

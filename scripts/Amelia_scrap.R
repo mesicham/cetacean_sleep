@@ -1236,3 +1236,506 @@ df <- data.frame(
              rep("P. Tie", 18))
 )
 
+
+# Section 9: Comparison of artio data to Bennie and Maor data ---------------------------------------------
+
+#my data
+artio_df <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv")) #235 species with data
+#Maor dataset
+Maor_diel <- read.csv(here("Maor_artio_full.csv")) #200 species
+Maor_diel <- Maor_diel[Maor_diel$tips %in% artio_df$tips, ] #193 when filtering for those in my dataframe
+#Bennie dataset
+Bennie_diel <- read.csv(here("Bennie_mam_data.csv")) #447 species
+Bennie_diel <- Bennie_diel[Bennie_diel$tips %in% artio_df$tips, ] #224 sps when filtering for those in my dataframe 
+
+mammals_df <- merge(Maor_diel, Bennie_diel, by = "tips", all = TRUE) #268 species
+#merge my artiodactyla data with the mammal data
+mammals_df <- merge(mammals_df, artio_df, by = "tips", all = TRUE) #leaves 276 species
+mammals_df <- mammals_df[, c("tips", "Diel_pattern", "max_crep.x", "Diel_Pattern")]
+colnames(mammals_df) <- c("tips", "Maor_diel", "Bennie_diel", "Amelia_diel")
+mammals_df$Maor_diel <- tolower(mammals_df$Maor_diel)
+
+#classify partially cathemeral species as cathemeral
+mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "nocturnal/cathemeral", replacement = "cathemeral")
+mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "diurnal/cathemeral", replacement = "cathemeral")
+
+#only keep species that have entries in all three databases, leaves 190 species
+mammals_df <- mammals_df[complete.cases(mammals_df[ , c('Bennie_diel', 'Maor_diel', 'Amelia_diel')]), ]
+
+#move my data to centre so its easier to compare my data to both existing datasets
+mammals_df <- mammals_df %>% relocate(Maor_diel, .after = last_col())
+
+#change cathemeral/crepuscular species to just crepuscular
+mammals_df <- data.frame(lapply(mammals_df, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
+df <- mammals_df %>% make_long(Bennie_diel, Amelia_diel, Maor_diel,)
+
+six_state_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.5, color = 1, fill = "white") + scale_fill_manual(values = c("#dd8ae7", "#EECBAD" ,"#FC8D62", "pink", "#66C2A5", "#A6D854")) +
+  theme_sankey(base_size = 16) + scale_x_discrete(labels = c("Bennie_diel" = "Existing database \n (Bennie et al)", "Amelia_diel" = "Current database \n (Mesich et al)", "Maor_diel" = "Existing database \n (Maor et al)")) +
+  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
+
+six_state_sankey
+
+#save out to figure folder
+# pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/", "Maor_Bennie_sankey_six_state.pdf"))
+# six_state_sankey
+# dev.off()
+
+#with maximum crepuscular dataset
+mammals_df1 <- data.frame(lapply(mammals_df, function(x) {gsub("diurnal/crepuscular", "crepuscular", x)}))
+mammals_df1 <- data.frame(lapply(mammals_df1, function(x) {gsub("nocturnal/crepuscular", "crepuscular", x)}))
+
+df <- mammals_df1 %>% make_long(Bennie_diel, Amelia_diel, Maor_diel,)
+
+max_crep_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.5, color = 1, fill = "white") + scale_fill_manual(values = c("#dd8ae7", "#EECBAD" ,"#FC8D62", "#66C2A5")) +
+  theme_sankey(base_size = 12) + scale_x_discrete(labels = c("Bennie_diel" = "Existing dataset \n (Bennie et al)", "Amelia_diel" = "Current dataset \n (Mesich et al)", "Maor_diel" = "Existing dataset \n (Maor et al)")) +
+  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), axis.text = element_text(size = 11), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
+
+max_crep_sankey
+
+
+proportion_plot <-   
+  mammals_df %>% 
+  pivot_longer(!tips, names_to = "dataset", values_to = "activity_pattern") %>%
+  mutate(activity_pattern = str_replace(activity_pattern, "diurnal/crepuscular", "diurnal")) %>%
+  mutate(activity_pattern = str_replace(activity_pattern, "nocturnal/crepuscular", "nocturnal")) %>%
+  ggplot(., aes(x = factor(dataset, levels = c("Bennie_diel", "Amelia_diel", "Maor_diel")), fill = activity_pattern)) + 
+  geom_bar(position = "fill", alpha = 0.75) +
+  scale_fill_manual(values= c("#dd8ae7","#EECBAD",  "#FC8D62","#66C2A5")) +
+  labs(y = "Proportion of species", x = "Clade") + 
+  scale_x_discrete(labels = c("Bennie_diel" = "Existing dataset \n (Bennie et al)", "Amelia_diel" = "Current dataset \n (Mesich et al)", "Maor_diel" = "Existing dataset \n (Maor et al)")) +
+  theme_bw() +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_text(size = 11), axis.text.y = element_text(size = 9))
+
+proportion_plot
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/artiodactyl_proportion_plot.pdf", width = 4.5, height = 3.85)
+proportion_plot
+dev.off()
+
+#save out to figure folder
+pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/", "Maor_Bennie_sankey_max_crep.pdf"), width = 4,  height = 4)
+max_crep_sankey
+dev.off()
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/artiodactyl_proportion_plot.pdf", width = 8.5, height = 3.75)
+proportion_plot + max_crep_sankey
+dev.off()
+
+
+# Section 6: Plot rates from 100 most likely models ----------------------------------
+
+filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+
+rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
+
+model_selection <- "ARD"
+
+#filter by the model you're plotting
+rates_df1 <- rates_df %>% filter(model == model_selection) 
+
+df_full <- plot1kAIC(readRDS(here(filename)), 5)
+df_full$model <- factor(df_full$model, levels = c("ER", "SYM", "CONSYM", "ARD", "bridge_only"))
+
+model_selection <- "ARD"
+
+df_full <- df_full %>% filter(model == model_selection)
+
+df_full$model_number <- 1:nrow(df_full)
+
+rates_df1$model_number <- rep(1:1000, each = (nrow(rates_df1)/1000))
+
+#merge by model number
+
+rates_df1 <- merge(rates_df1, df_full[, c("AIC_score", "model_number")], by = "model_number", all = TRUE)
+
+#create list of 100 best models (lowest AIC score)
+lowest_100 <- rates_df1 %>% arrange(AIC_score) %>% select(model_number) %>% slice(1:(nrow(rates_df1)/10))
+
+#filter by list
+rates_df1 <- rates_df1 %>% filter(model_number %in% unique(lowest_100$model_number))
+
+#plot as usual
+
+#extract just the starting state
+rates_df1$start_state <- word(rates_df1$solution, 1)
+#rates_df1$start_state <- paste(rates_df1$start_state, "to", sep = " ")
+rates_df1$end_state <- word(rates_df1$solution, 3)
+
+rates_df1$start_state <- factor(rates_df1$start_state, levels = c("Cathemeral to", "Diurnal to", "Crepuscular to", "Nocturnal to"))
+
+#ARD colours
+rate_colours_end = c("#AD9680","#FA4A05","#3C967E","#A024AE", "#FA4A05","#3C967E", "#A024AE","#AD9680", "#3C967E","#A024AE","#AD9680", "#FA4A05")
+#bridge colours
+#rate_colours_end = c("#AD9680","#FA4A05","#3C967E","#A024AE", "#FA4A05","#3C967E", "#A024AE","#AD9680", "#A024AE","#AD9680")
+
+rates_plot <- 
+  ggplot(rates_df1, aes(x= end_state, y = log(rates), group = solution, fill = solution, colour = solution)) + 
+  geom_quasirandom(alpha = 0.8, width = 0.5, method = "quasirandom") + 
+  scale_color_manual(values = rate_colours_end) +
+  geom_violin(color = "black", scale = "width", alpha = 0.5) + theme_bw() +
+  scale_fill_manual(values = rate_colours_end) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size =10), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"), legend.position = "none")  +
+  labs(x = "\n Transition", y = "Log(transition rate)") + 
+  stat_summary(fun=median, geom="point", size=3, colour = "black", alpha = 0.2) +
+  facet_wrap(~start_state, scales = "free_x", nrow = 2, ncol = 2)
+
+rates_plot
+
+
+#which trees overlap in the most likely models?
+filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+
+rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
+rates_df1 <- rates_df %>% filter(model %in% c("ER", "SYM", "ARD")) %>% mutate(model_number = rep(rep(1:1000, each = 12),3))
+rates_df2 <- rates_df %>% filter(model %in% c("CONSYM", "Bridge_only")) %>% mutate(model_number = rep(rep(1:1000, each = 10),2))
+rates_df <- rbind(rates_df1, rates_df2)
+
+df_full <- plot1kAIC(readRDS(here(filename)), 5)
+df_full$model <- factor(df_full$model, levels = c("ER", "SYM", "CONSYM", "ARD", "bridge_only"))
+df_full$model_number <- rep(1:1000, 5)
+
+#merge by model number
+
+rates_df <- merge(rates_df, df_full[, c("AIC_score", "model_number")], by = "model_number", all = TRUE)
+
+ggplot(rates_df, aes(x = model_number, y = AIC_score, colour = model)) + geom_point()
+
+df_full %>% group_by(model) %>% filter(AIC_score <200) %>%
+  ggplot(., aes(x = model_number)) + geom_histogram(bins = 1000)
+
+#filter for trees that appear in all five models as having the lowest AIC score
+best_tree_list <-
+  df_full %>%  filter(AIC_score <200) %>% group_by(model_number) %>%
+  summarize(count = n()) %>% filter(count == 5) %>% pull(model_number)
+
+#there are 19 trees with an AIC score less than 200 found in all 5 cetacean models
+df_full %>% filter(model_number %in% best_tree_list) %>%
+  ggplot(., aes(x = model, y = AIC_score)) + geom_boxplot() + geom_point()
+
+rates_df %>% filter(model_number %in% best_tree_list) %>%
+  ggplot(., aes(x = solution, y = log(rates), fill = solution)) + geom_point() + geom_violin()
+
+# Section 8: Lineages through time  ---------------------------------------
+
+filename <- "whippomorpha_finalized_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models"
+filename <- "ruminants_finalized_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models"
+
+model_results <- readRDS(here(paste0(filename, ".rds")))
+
+model <- model_results$bridge_only_model 
+
+trpy_n <- model$phy                 
+
+setwd(here())
+source("scripts/fish_sleep_functions.R")
+
+# First, extract the ancestral states from the best fit model
+anc_states <- returnAncestralStates(phylo_model = model, phylo_tree = trpy_n, rate.cat = 1, recon = "marg")
+
+# Then, calculate transitions between states (or rate categories if set to true)
+anc_states <- calculateStateTransitions(ancestral_states = anc_states, phylo_tree = trpy_n, rate.cat = F)
+
+# Determine transition histories (types of lineages)
+#adjust this function so it can accept four trait states
+anc_states <- calculateLinTransHist2(ancestral_states = anc_states, phylo_tree = trpy_n)
+
+# Calculate cumsums through time (for ltt plots)
+anc_states <- returnCumSums(ancestral_states = anc_states, phylo_tree = trpy_n)
+
+switch.histo <- switchHisto(ancestral_states = anc_states, replace_variable_names = T, backfill = F, states = T)
+switch.ratio.types <- switchRatio(ancestral_states = anc_states, phylo_tree = trpy_n, node.age.cutoff = 0.02, use_types = T)
+switch.ratio <- switchRatio(ancestral_states = anc_states, phylo_tree = trpy_n, node.age.cutoff = 0.02, use_types = F)
+
+#fix so it has all four trait states
+numb_switch_tree <- switchTree(ancestral_states = anc_states, phylo_tree = trpy_n, layout = "circular", replace_variable_names = TRUE)
+
+# Section 9: PCA of transition rates --------------------------------------------------
+library(FactoMineR)
+#install.packages("factoextra")
+library(factoextra)
+
+#filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_artiodactyla_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+
+#requires the filename, the number of states in the model and the number of Mk models 
+#returns a dataframe of the rates from each of the Mk models, for each of the 1k trees
+rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
+
+#filter by the model you're plotting
+rates_df1 <- rates_df %>% filter(model == "Bridge_only") 
+
+#convert to needed format, every row is a model, every column is a transition rate
+rates_df1$model_number <- rep(1:1000, each = (nrow(rates_df1)/1000))
+rates.mx <- rates_df1 %>% select(rates, solution, model_number) %>% 
+  pivot_wider(., names_from = solution, values_from = rates) %>%
+  select(-model_number) %>%
+  as.matrix()
+
+#to get the cluster for each transition instead of each tree, this makes less sense
+#rates.mx <- t(rates.mx)
+
+#determine the optimal number of clusters (12 for the 12 transition rates?)
+#can try various methods: wss, gap_stat, silhouette
+
+fviz_nbclust(x = rates.mx, FUNcluster =  kmeans, method="wss") +
+  theme(text = element_text(size=10))
+
+
+# Compute k-means with k = 3 (can test alternative values)
+
+# Set a seed for reproducibility.
+set.seed(123)
+
+# Generate our k-means analysis
+rates.km <- 
+  kmeans(scale(rates.mx), # We'll scale our data for this 
+         centers = 4, 
+         nstart = 25,
+         iter.max = 500)
+
+#plot the clusters
+fviz_cluster(object = rates.km, # our k-means object
+             data = rates.mx, # Our original data needed for PCA to visualize
+             ellipse.type = "convex", 
+             ggtheme = theme_bw(), 
+             geom = "text",
+             #repel=TRUE, # Try to avoid overlapping text
+             labelsize = 10,
+             pointsize = 4,
+             main = "K-means clustering of cetacean activity pattern transition rates"
+) +
+  
+  # Set some ggplot theme information
+  theme(text = element_text(size=10)) +
+  
+  # Set the colour and fill scheme to viridis
+  scale_fill_viridis_d(begin = 0, end = 0.7) +
+  scale_colour_viridis_d(begin = 0, end = 0.7)
+
+
+# Build a PCA of our RNAseq data with scaling applied
+rates_scaled.pca <- FactoMineR::PCA(rates.mx, 
+                                    scale.unit = TRUE, 
+                                    ncp = 10,
+                                    graph = TRUE)
+
+
+# Visualize the impact of our eigenvalues
+fviz_eig(rates_scaled.pca, addlabels = TRUE) + 
+  theme(text = element_text(size=10))
+
+# What is the information associated with our original variables
+rates.var <- get_pca_var(rates_scaled.pca)
+
+# Compare how our variables contribute and correlate with PC1/PC2
+fviz_pca_var(X = rates_scaled.pca, 
+             col.var = "contrib", # How will we colour our data/lines
+             gradient.cols = c("green", "gold", "red"), 
+             labelsize = 6,
+             repel = TRUE, # make sure text doesn't overlap
+             axes = c(3,4) # Determine which PCs you want to graph
+) + 
+  theme(text = element_text(size=7))
+
+
+# Graph our scaled PCA data.
+fviz_pca_ind(rates_scaled.pca, 
+             #repel = TRUE, # avoid overlapping text points
+             labelsize = 2, 
+             axes = c(3,4) #chose which principal components 
+) + theme(text = element_text(size=6)) # Make our text larger
+
+#extract the individual trees from each cluster
+#since the input is the transition rates from each tree (1-1000) numbering the results will give the correct model number
+model_clusters <- data.frame(cluster = rates.km$cluster, model_number = 1:1000)
+
+#plot the rates from only these trees
+
+#filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
+
+model_selection <- "Bridge_only"
+
+#filter by the model you're plotting
+rates_df1 <- rates_df %>% filter(model == model_selection) 
+
+#label the model results by the tree it comes from
+rates_df1$model_number <- rep(1:1000, each = (nrow(rates_df1)/1000))
+
+#extract the list of tree numbers
+cluster_list <- model_clusters %>% filter(cluster == 4) %>% pull(model_number)
+
+#filter for the trees in the PCA cluster
+rates_df1 <- rates_df1 %>% filter(model_number %in% cluster_list)
+
+#extract just the starting state
+rates_df1$start_state <- word(rates_df1$solution, 1)
+rates_df1$end_state <- word(rates_df1$solution, 3)
+
+rates_df1$start_state <- factor(rates_df1$start_state, levels = c("Cathemeral", "Diurnal", "Crepuscular", "Nocturnal"))
+
+#ARD colours
+rate_colours_end = c("#AD9680","#FA4A05","#3C967E","#A024AE", "#FA4A05","#3C967E", "#A024AE","#AD9680", "#3C967E","#A024AE","#AD9680", "#FA4A05")
+#bridge colours
+#rate_colours_end = c("#AD9680","#FA4A05","#3C967E","#A024AE", "#FA4A05","#3C967E", "#A024AE","#AD9680", "#A024AE","#AD9680")
+
+rates_plot <- 
+  ggplot(rates_df1, aes(x= end_state, y = log(rates), group = solution, fill = solution, colour = solution, label = model_number)) + 
+  geom_quasirandom(alpha = 0.8, width = 0.5, method = "quasirandom") + 
+  #geom_text(colour = "black") +
+  scale_color_manual(values = rate_colours_end) +
+  geom_violin(color = "black", scale = "width", alpha = 0.5) + theme_bw() +
+  scale_fill_manual(values = rate_colours_end) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size =10), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"), legend.position = "none")  +
+  labs(x = "\n Transition", y = "Log(transition rate)") + 
+  stat_summary(fun=median, geom="point", size=3, colour = "black", alpha = 0.2) +
+  facet_wrap(~start_state, scales = "free_x", nrow = 2, ncol = 2)
+
+rates_plot
+
+#look at the structure of each tree
+
+filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+model_results_all <- readRDS(here(filename))
+
+plotMKmodel(model_results_all$bridge_only_model[439]$UNTITLED)
+plotMKmodel(model_results_all$bridge_only_model[997]$UNTITLED)
+
+custom.colours <- c("#dd8ae7", "#EECBAD" ,"#FC8D62", "#66C2A5")
+
+model_results <- model_results_all$bridge_only_model[439]$UNTITLED
+model_results$phy$tip.label  <- paste0(substr(model_results$phy$tip.label, 1, 1), "_", sapply(str_split(model_results$phy$tip.label,"_"), `[`, 2))
+model_results$data[,c("tips")] <- paste0(substr(model_results$data[,c("tips")], 1, 1), "_", sapply(str_split(model_results$data[,c("tips")],"_"), `[`, 2))
+sub_tree <- ggtree(model_results$phy, layout = "rectangular") %<+% model_results$data[,c("tips", "Diel_Pattern")]
+sub_tree <- sub_tree + geom_tiplab(size = 2.5, offset = 1) 
+sub_tree <- sub_tree + geom_tile(data = sub_tree$data[1:length(model_results$phy$tip.label),], aes(x=x, y=y, fill = Diel_Pattern), inherit.aes = FALSE, colour = "transparent", width = 1) 
+sub_tree <- sub_tree + theme(legend.position = "bottom") + scale_fill_manual(name = "Temporal activity pattern", values = custom.colours)
+viewClade(sub_tree, 142)
+
+model_results <- model_results_all$bridge_only_model[997]$UNTITLED
+model_results$phy$tip.label  <- paste0(substr(model_results$phy$tip.label, 1, 1), "_", sapply(str_split(model_results$phy$tip.label,"_"), `[`, 2))
+model_results$data[,c("tips")] <- paste0(substr(model_results$data[,c("tips")], 1, 1), "_", sapply(str_split(model_results$data[,c("tips")],"_"), `[`, 2))
+sub_tree2 <- ggtree(model_results$phy, layout = "rectangular") %<+% model_results$data[,c("tips", "Diel_Pattern")]
+sub_tree2 <- sub_tree2 + geom_tiplab(size = 2.5, offset = 1)
+sub_tree2 <- sub_tree2 + geom_tile(data = sub_tree2$data[1:length(model_results$phy$tip.label),], aes(x=x, y=y, fill = Diel_Pattern), inherit.aes = FALSE, colour = "transparent", width = 1) 
+sub_tree2 <- sub_tree2 + theme(legend.position = "none") + scale_fill_manual(name = "Temporal \n activity pattern", values = custom.colours)
+viewClade(sub_tree2, 142)
+
+viewClade(sub_tree, 142) + viewClade(sub_tree2, 142)
+
+#save out tree
+png("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\Amelia_figures\\example_trees_439_997.png", width = 12, height = 5, units = "in", res = 800)
+viewClade(sub_tree, 142) + viewClade(sub_tree2, 142)
+dev.off()  
+
+
+lik.anc <- as.data.frame(rbind(model_results$tip.states, model_results$states))
+colnames(lik.anc) <- c("cathemeral", "crepuscular", "diurnal", "nocturnal")
+ggtree(phylo_tree, layout = "rectangular") + geom_tiplab(size = 1.8) + 
+  geom_text(aes(label=node)) 
+
+
+
+
+#associate each of these species and their trait states with its node
+lik.anc$node <- c(1:length(phylo_tree$tip.label), (length(phylo_tree$tip.label) + 1):(phylo_tree$Nnode + length(phylo_tree$tip.label)))
+
+#plot the ancestral reconstruction, displaying each of the three trait states (cathemeral, diurnal, nocturnal)
+ancestral_plot_di <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = diurnal) + geom_tippoint(aes(color = diurnal), shape = 16, size = 1.5) + scale_color_distiller(palette = "OrRd", direction = 1)  + geom_tiplab(color = "black", size = 3, offset = 0.5) + geom_tippoint(aes(color = diurnal), shape = 16, size = 1.5)
+ancestral_plot_di
+ancestral_plot_noc <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = nocturnal) + geom_tippoint(aes(color = nocturnal), shape = 16, size = 1.5)+ scale_color_distiller(palette = "GnBu", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = nocturnal), shape = 16, size = 1.5)
+ancestral_plot_noc
+ancestral_plot_cath <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = cathemeral) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5) + scale_color_distiller(palette = "RdPu", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5)
+ancestral_plot_cath
+ancestral_plot_crep <- ggtree(phylo_tree, layout = "circular") %<+% lik.anc + aes(color = crepuscular) + geom_tippoint(aes(color = crepuscular), shape = 16, size = 1.5) + scale_color_distiller(palette = "Greens", direction = 1) + geom_tiplab(color = "black", size = 1.5, offset = 0.5) + geom_tippoint(aes(color = cathemeral), shape = 16, size = 1.5)
+ancestral_plot_crep
+
+#as pie charts 
+colnames(model_results$data) <- c("tips", "Diel_Pattern")
+
+#to make more clear we can colour the tips separately using geom_tipppoint 
+#may have to adjust what trait data column is called in each
+base_tree <- ggtree(phylo_tree, layout = "rectangular") + geom_tiplab(size = 2, hjust = -0.1)
+base_tree <- base_tree %<+% model_results$data[, c("tips", "Diel_Pattern")]
+base_tree <- base_tree + geom_tippoint(aes(color = Diel_Pattern), size = 3) 
+base_tree
+
+#make the dataframe of likelihoods at the internal nodes without the tips
+lik.anc <- as.data.frame(model_results$states)
+lik.anc$node <- c(1:nrow(lik.anc)) + nrow(model_results$data)
+
+#get the pie charts from this database using nodepie
+#the number of columns changes depending on how many trait states
+pie <- nodepie(lik.anc, 1:(length(lik.anc)-1))
+
+pie_tree <- base_tree + geom_inset(pie, width = .03, height = .03) 
+pie_tree 
+
+png("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\Amelia_figures\\example_tree_496.png", width = 40, height = 8, units = "cm", res = 800)
+pie_tree + theme(legend.position = "none")
+dev.off() 
+
+mammal_trees <- read.nexus(here("Cox_mammal_data/Complete_phylogeny.nex"))
+trait.data <- model_results_all$bridge_only_model[4]$UNTITLED$data
+phylo_trees <- lapply(mammal_trees, function(x) subsetTrees(tree = x, subset_names = trait.data$tips))
+
+cluster_list <- model_clusters %>% filter(cluster == 1) %>% pull(model_number)
+subset_trees <- phylo_trees[cluster_list]
+
+ggdensitree(subset_trees, layout = "rectangular")
+
+ggtree(phylo_trees[4]$UNTITLED)
+ggtree(model_results_all$bridge_only_model[4]$UNTITLED$phy)
+
+# Section: Baker Proportion plots -----------------------------------------------
+
+Baker_proportion <-   
+  Baker_df %>% 
+  pivot_longer(c("Activity_pattern", "max_crep"), names_to = "dataset", values_to = "activity_pattern") %>%
+  mutate(activity_pattern = str_replace(activity_pattern, "diurnal/crepuscular", "diurnal")) %>%
+  mutate(activity_pattern = str_replace(activity_pattern, "nocturnal/crepuscular", "nocturnal")) %>%
+  ggplot(., aes(x = factor(dataset, levels = c("Activity_pattern", "max_crep")), fill = activity_pattern)) + 
+  geom_bar(position = "fill", alpha = 0.75) +
+  scale_fill_manual(values= c("#dd8ae7","#EECBAD", "#FC8D62","#66C2A5")) +
+  labs(y = "Proportion of species", x = "Clade") + 
+  scale_x_discrete(labels =  c("Activity_pattern" = "Existing dataset \n (Baker et al)", "max_crep" = "Current dataset \n (Mesich et al)")) +
+  theme_bw() +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_text(size = 11), axis.text.y = element_text(size = 9))
+
+Baker_proportion
+
+#save out to figure folder
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Baker_sankey_four_state.pdf", width= 5, height = 4)
+Baker_sankey
+dev.off()
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Baker_proportion_plot.pdf", width = 3.5, height = 3.85)
+Baker_proportion
+dev.off()
+
+# Section: six state sankey -----------------------------------------------
+
+df <- Bennie_diel %>% make_long(max_crep.x, Diel_Pattern) 
+Bennie_six_state_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.5, color = 1, fill = "white") + scale_fill_manual(values = c("#dd8ae7", "#EECBAD" ,"#FC8D62", "pink", "#66C2A5", "#A6D854", "grey")) +
+  theme_sankey(base_size = 16) + 
+  scale_x_discrete(labels = c("max_crep.x" = "Existing database \n (Bennie et al)", "Diel_Pattern" = "Current database \n (Mesich et al)")) +
+  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
+
+Bennie_six_state_sankey
+
+df <- Maor_diel %>% make_long(Diel_pattern, Diel_Pattern)
+
+Maor_six_state_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.5, color = 1, fill = "white") + scale_fill_manual(values = c("#dd8ae7", "#EECBAD" ,"#FC8D62", "pink", "#66C2A5", "#A6D854")) +
+  theme_sankey(base_size = 16) + 
+  scale_x_discrete(labels = c("Diel_pattern" = "Existing database \n (Maor et al)", "Diel_Pattern" = "Current database \n (Mesich et al)")) +
+  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
+
+Maor_six_state_sankey

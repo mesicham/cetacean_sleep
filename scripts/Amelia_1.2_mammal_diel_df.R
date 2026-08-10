@@ -10,7 +10,7 @@ Bennie_mam_data$SpeciesBehaviourReference <- str_replace(string = Bennie_mam_dat
 Bennie_mam_data <- separate(Bennie_mam_data, col = SpeciesBehaviourReference, into = c("tips", "max_crep", "Reference"), sep = " ")
 Bennie_mam_data$max_crep <- tolower(Bennie_mam_data$max_crep)
 Bennie_mam_data$Species_name <- str_replace(string = Bennie_mam_data$tips, pattern = "_", replacement  = " ")
-trait.data <- Bennie_mam_data[1:4477, c("tips", "max_crep", "Species_name") ]
+Bennie_mam_data <- Bennie_mam_data[1:4477, c("tips", "max_crep", "Species_name") ]
 
 resolved_names <- tnrs_match_names(names = trait.data$Species_name, context_name = "Vertebrates", do_approximate_matching = TRUE)
 missing_names <- resolved_names[is.na(resolved_names$ott_id), ] #40 names not found
@@ -58,11 +58,10 @@ df[df$Family %in% c("Aotidae", "Atelidae", "Cebidae", "Cercopithecidae", "Cheiro
 df[df$Genus %in% c("Microgale", "Tenrec", "Hemicentetes", "Oryzorictes", "Echinops", "Geogale", "Limnogale", "Setifer"), "Family"] <- "Tenrecidae"
 df[df$Genus %in% c("Micropotamogale", "Potamogale"), "Family"] <- "Potamogalidae"
 df[df$Family %in% c("Tenrecidae", "Potamogalidae"), "Order"] <- "Afrosoricida"
+ 
+trait.data <- merge(Bennie_mam_data, df, by = "Species_name", all = TRUE)
 
-test2 <- cbind(trait.data, df)  
-trait.data <- merge(trait.data, df, by = "Species_name", all = TRUE)
-
-#40 (39?) species weren't found in the otl and so won't have taxonomic info
+#40 species weren't found in the otl and so won't have taxonomic info
 trait.data[is.na(trait.data$Genus), "Genus"] <- sub(" .*", "", trait.data[is.na(trait.data$Genus), "Species_name"])
 
 #use existing taxonomic info to fill in those species by matching by genus
@@ -106,75 +105,79 @@ trait.data[trait.data$Family %in% c("Petauridae"), "Order"] <- "Diprotodontia"
 trait.data[trait.data$tips == "Tadarida_sarasinorum", "Family"] <- "Molossidae"
 trait.data[trait.data$tips == "Tadarida_sarasinorum", "Order"] <- "Chiroptera"
   
-#should have 4477 species
+colnames(trait.data) <- c("Species_name", "tips", "Bennie_activity_pattern", "Order", "Family", "Genus")
+
+#save out Bennie mammal data, 4477 species
 write.csv(trait.data, here("Bennie_mam_data.csv"), row.names = FALSE)
 
 # Section 2: Maor dataframe -----------------------------------------------
 #read in the Maor diel activity patterns
 #from https://doi.org/10.1038/s41559-017-0366-5 
 maor_mam_data <- read_excel(here("Maor_diel_activity_data.xlsx"))
-maor_mam_data <- maor_mam_data[17:nrow(maor_mam_data), 3:5]
-colnames(maor_mam_data) <- c("Species", "Activity_pattern", "Reference")
+maor_mam_data <- maor_mam_data[17:3403, 1:4]
+colnames(maor_mam_data) <- c("Order", "Family", "Species", "Maor_activity_pattern")
+maor_mam_data$Maor_activity_pattern <- tolower(maor_mam_data$Maor_activity_pattern)
 
-#the issue with this df is that if they have an alternative activity they add it in a new row
+unique(maor_mam_data$Maor_activity_pattern) 
+
+#remove extinct or inconsistent naming
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal / arrhythmic", "cathemeral/nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "diurnal or cathemeral", "cathemeral/diurnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal - extinct", "nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal /crepuscular", "crepuscular/nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "diurnal/crepuscular", "crepuscular/diurnal")
+
+#change to alphabetical order, helps with resolving duplicates later
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "diurnal/crepuscular", "crepuscular/diurnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal/crepuscular", "crepuscular/nocturnal")
+
+maor_mam_data$tips <- str_replace(maor_mam_data$Species, pattern = " ", replacement = "_")
+
+# collapse duplicate entries into one line
 duplicates1 <- maor_mam_data[duplicated(maor_mam_data$Species),]
 #make another dataframe since some sps are repeated twice
-duplicates2 <- duplicates1[duplicated(duplicates1$Species),] #1080 species have at least one alt diel pattern
-duplicates1 <- duplicates1[!duplicated(duplicates1$Species),] #208 species have 2 alt diel patterns
+duplicates2 <- duplicates1[duplicated(duplicates1$Species),] 
+duplicates1 <- duplicates1[!duplicated(duplicates1$Species),]
+maor_mam_data <- maor_mam_data[!duplicated(maor_mam_data$tips),]
+maor_mam_data <- merge(maor_mam_data, duplicates1[, c("Species", "Maor_activity_pattern")], by='Species', all.x = TRUE, all.y = TRUE)
+maor_mam_data <- merge(maor_mam_data, duplicates2[, c("Species", "Maor_activity_pattern")], by='Species', all.x = TRUE, all.y = TRUE)
 
-#remove duplicates from Maor dataframe for now, we'll add alternative diel patterns back next
-maor_mam_data <-maor_mam_data[!duplicated(maor_mam_data$Species),]
-maor_mam_data$Species <- str_replace(string = maor_mam_data$Species, pattern = " ", replacement  = "_")
 
-#format some entries to be max_crep (di/crep -> crep, noc/crep -> crep)
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "Diurnal/ Crepuscular", "Crepuscular")
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "Nocturnal/Crepuscular", "Crepuscular")
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "Nocturnal /Crepuscular", "Crepuscular")
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "Diurnal or Cathemeral", "Cathemeral")
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "Diurnal/Crepuscular", "Crepuscular")
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "Nocturnal - EXTINCT", "Nocturnal")
-maor_mam_data$Activity_pattern <- str_replace_all(maor_mam_data$Activity_pattern, "EXTINCT", "")
+maor_mam_data$Maor_activity_pattern <- apply(cbind(maor_mam_data$Maor_activity_pattern, 
+                                                   maor_mam_data$Maor_activity_pattern.x, 
+                                                   maor_mam_data$Maor_activity_pattern.y), 
+                                             1, function(x) paste(sort(x), collapse="/"))
 
-#Don't add back alternative patterns for now
-#save out Maor dataframe
-write.csv(maor_full, here("maor_full.csv"), row.names  = FALSE)
+unique(maor_mam_data$Maor_activity_pattern)
 
-# #add all the extra diel patterns, then sort the columns after since they're in a random order anyway
-maor_mam_data <- merge(maor_mam_data, duplicates1, by='Species', all.x = TRUE, all.y = TRUE)
-maor_full <- merge(maor_mam_data, duplicates2, by='Species', all.x = TRUE, all.y = TRUE)
-maor_full <- maor_full[, c("Species", "Activity_pattern", "Activity_pattern.x", "Activity_pattern.y")]
-maor_full <- relocate(maor_full, "Activity_pattern.x", .after = "Activity_pattern.y")
-colnames(maor_full) <- c("Species", "alt_pattern_1", "alt_pattern_2", "Activity_pattern")
-maor_full$alt_pattern_1 <- str_replace(maor_full$alt_pattern_1, pattern = "Nocturnal / Arrhythmic", replacement = "Nocturnal/Cathemeral")
-maor_full$alt_pattern_2 <- str_replace(maor_full$alt_pattern_2, pattern = "Nocturnal / Arrhythmic", replacement = "Nocturnal/Cathemeral")
-maor_full$alt_pattern_2 <- str_replace(maor_full$alt_pattern_2, pattern = "Ultradian", replacement = "Cathemeral")
+#remove duplicated identical entries
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal/nocturnal", "nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "diurnal/diurnal", "diurnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "cathemeral/cathemeral", "cathemeral")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/crepuscular", "crepuscular")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal/nocturnal", "nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "diurnal/diurnal", "diurnal")
 
-#filter for just artiodactyls
-artio_full <- read.csv(here("sleepy_artiodactyla_full.csv"))
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/diurnal/crepuscular/nocturnal", "crepuscular/diurnal/nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/nocturnal/crepuscular/diurnal", "crepuscular/diurnal/nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/nocturnal/crepuscular/nocturnal", "crepuscular/nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/nocturnal/diurnal/nocturnal", "crepuscular/diurnal/nocturnal")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "cathemeral/nocturnal/cathemeral/nocturnal", "cathemeral/nocturnal")
 
-maor_full$tips <- str_replace(maor_full$Species, pattern = " ", replacement = "_")
-maor_full <- maor_full[maor_full$tips %in% artio_full$tips,] #leaves 200 species
+unique(maor_mam_data$Maor_activity_pattern)
 
-#lazy solution
-maor_full$Diel_pattern <- paste(maor_full$alt_pattern_1, maor_full$alt_pattern_2, maor_full$Activity_pattern, sep = "/")
+#keep only necessary columns
+maor_mam_data <- maor_mam_data %>% select(Order, Family, tips, Maor_activity_pattern)
 
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "NA/", replacement = "")
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "/NA", replacement = "")
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "NA", replacement = "")
+#change order to match my dataset
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/nocturnal", "nocturnal/crepuscular")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "crepuscular/diurnal", "diurnal/crepuscular")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "diurnal/crepuscular/nocturnal", "diurnal/nocturnal/crepuscular")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal/diurnal/crepuscular", "diurnal/nocturnal/crepuscular")
+maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "cathemeral/nocturnal/diurnal/crepuscular", "cathemeral/diurnal/nocturnal/crepuscular")
 
-unique(maor_full$Diel_pattern)
-
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "Nocturnal/Crepuscular/Nocturnal", replacement = "Nocturnal/Crepuscular")
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "Crepuscular/Nocturnal", replacement = "Nocturnal/Crepuscular")
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "Nocturnal/Diurnal", replacement = "Cathemeral")
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "Diurnal/Crepuscular/Cathemeral", replacement = "Cathemeral/Crepuscular")
-maor_full$Diel_pattern <- str_replace_all(maor_full$Diel_pattern, pattern = "Crepuscular/Cathemeral", replacement = "Cathemeral/Crepuscular")
-
-maor_full <- maor_full[, c("Species", "Diel_pattern", "tips")]
-
-#save out Maor dataframe
-write.csv(maor_full, here("maor_artio_full.csv"), row.names  = FALSE)
-
+#save out Maor dataframe, 2416 species
+write.csv(maor_mam_data, here("Maor_mam_data.csv"), row.names  = FALSE)
 
 # Section 3: Baker dataframe ----------------------------------------------
 
@@ -197,15 +200,18 @@ Baker_df[Baker_df$tips == "Taurotragus_derbianus", "tips"] <- "Tragelaphus_derbi
 
 Baker_df <- Baker_df %>% select(tips, Order, Activity_pattern)
 
+#save out Baker et al dataset, 3,014 species
 write.csv(Baker_df, here("Baker_mam_data.csv"), row.names = FALSE)
 
 # Section 3: How well do these sources agree? -----------------------------
-diel_merge <- merge(Bennie_mam_data,maor_mam_data,by="Species")
-colnames(diel_merge) <- c("Species", "Bennie_diel", "Bennie_source", "Maor_diel", "Maor_source")
-diel_merge$Bennie_diel <- tolower(diel_merge$Bennie_diel)
-diel_merge$Maor_diel <- tolower(diel_merge$Maor_diel)
+Bennie_mam_data <- read.csv(here("Bennie_mam_data.csv"))
+maor_mam_data <- read.csv(here("Maor_mam_data.csv"))
+
+diel_merge <- merge(Bennie_mam_data, maor_mam_data,by="tips") %>% select("tips", "Bennie_activity_pattern", "Order.x", "Family.x", "Maor_activity_pattern")
+colnames(diel_merge) <- c("Species", "Bennie_diel", "Order", "Family", "Maor_diel")
+
 #set default to idk
-diel_merge$match <- "Idk"
+diel_merge$match <- "Unknown"
 
 for(i in 1:length(diel_merge$Species)){
   if(diel_merge[i, "Bennie_diel"] == diel_merge[i, "Maor_diel"]){
@@ -232,7 +238,7 @@ diel_table <- transform(diel_table, percent = (n/sum(diel_table$n)) * 100)
 diel_table <- trait.data.all %>% count(Confidence)
 diel_table <- transform(diel_table, percent = (n/sum(diel_table$n)) * 100)
 
-ggplot(diel_table, aes(x="", y=n, fill=Confidence)) +
+ggplot(diel_table, aes(x="", y=n)) +
   geom_bar(stat="identity", width=1) +
   coord_polar("y", start=0) + theme_void()
 
