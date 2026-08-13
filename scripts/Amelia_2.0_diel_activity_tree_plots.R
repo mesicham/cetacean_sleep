@@ -297,7 +297,7 @@ suborders_plot <-
   scale_fill_manual(values = custom.colours) +
   scale_x_discrete(labels = c("Artiodactyla" = "Artiodactyla \n (n = 305)", "Ruminantia" = "Ruminantia \n (n = 203)", "Suina" = "Suina \n (n = 20)", "Tylopoda" = "Tylopoda \n (n = 4)", "Whippomorpha" = "Whippomorpha \n (n = 78)")) +
   labs(y = "Proportion of species", x = "Clade") +
-  theme_bw() +
+  theme_classic() +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text = element_text(size = 9))
 
 pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/barplot_percentages.pdf", width = 4.25, height = 2, bg = "transparent")

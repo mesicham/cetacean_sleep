@@ -560,19 +560,15 @@ confusion_plot_rum <-
   ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label= paste0(percent, "%")), size = 3) +
   scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
   labs(x = "Actual (final activity pattern)", y = "Predicted (activity pattern of sources)") + 
-  theme_void() +
+  theme_classic() +
   scale_x_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
   scale_y_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.title = element_text(size = 11))
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ruminants_all_conf_levels_confusion_matrix.pdf", width = 4, height = 2)
-# confusion_plot_rum 
-# dev.off()
-
 #save out combined plots
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_confusion_matrix.pdf", width = 4, height = 4.3)
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_confusion_matrix.pdf", width = 4.3, height = 4.3)
 (confusion_plot_cet + labs(x = "\n", y = "")) /
-  (confusion_plot_rum + theme(axis.title.y = element_blank()))
+  (confusion_plot_rum + theme(axis.title = element_blank()))
 dev.off()
 
 
@@ -724,7 +720,7 @@ Maor_diel$Maor_activity_pattern<- str_replace(Maor_diel$Maor_activity_pattern, p
 
 Maor_diel <- data.frame(lapply(Maor_diel, function(x) {gsub("cathemeral/crepuscular", "Crepuscular", x)}))
 Maor_diel <- Maor_diel %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Maor_activity_pattern = str_to_title(Maor_activity_pattern))
-Maor_diel <- data.frame(lapply(Maor_diel, function(x) {gsub("/C", " and\n c", x)}))
+Maor_diel <- data.frame(lapply(Maor_diel, function(x) {gsub("/C", " and\nc", x)}))
 
 Maor_sankey2 <-  Maor_diel %>% make_long(Maor_activity_pattern, Diel_Pattern) %>%
   ggplot(., aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
@@ -736,9 +732,26 @@ Maor_sankey2 <-  Maor_diel %>% make_long(Maor_activity_pattern, Diel_Pattern) %>
 
 Maor_sankey2 
 
+#concordance by activity pattern
+concordance <- as.data.frame(table(Maor_diel$Maor_activity_pattern, Maor_diel$Diel_Pattern))
+colnames(concordance) <- c("actual", "predicted", "freq")
+totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
+colnames(totals_df) <- c("actual", "total")
+concordance <- merge(concordance, totals_df, by = "actual")
+concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
+
+confusion_plot_maor <-
+  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
+  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
+  labs(x = "Maor et al", y = "Mesich et al") + 
+  theme_void() +
+  theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45 ,
+                                                                                                 hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
+confusion_plot_maor
+
 # Section : Bennie et al data comparison ----------------------------------
 #my data
-artio_df <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv")) #235 species with data
+artio_df <- read.csv(here("sleepy_artiodactyla_full.csv")) #235 species with data
 artio_df <- artio_df %>% select(Species_name, Diel_Pattern, max_crep, tips)
 
 #Bennie dataset
@@ -776,7 +789,7 @@ for(i in 1:nrow(Bennie_diel)){
 
 Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("cathemeral/crepuscular", "Crepuscular", x)}))
 Bennie_diel <- Bennie_diel %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Bennie_activity_pattern = str_to_title(Bennie_activity_pattern))
-Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("/C", " and\n c", x)}))
+Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("/C", " and\nc", x)}))
 
 Bennie_sankey <- Bennie_diel %>% make_long(Bennie_activity_pattern, Diel_Pattern) %>%
   ggplot(., aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
@@ -788,6 +801,22 @@ Bennie_sankey <- Bennie_diel %>% make_long(Bennie_activity_pattern, Diel_Pattern
 
 Bennie_sankey
 
+#concordance by activity pattern
+concordance <- as.data.frame(table(Bennie_diel$Bennie_activity_pattern, Bennie_diel$Diel_Pattern))
+colnames(concordance) <- c("actual", "predicted", "freq")
+totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
+colnames(totals_df) <- c("actual", "total")
+concordance <- merge(concordance, totals_df, by = "actual")
+concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
+
+confusion_plot_bennie <-
+  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
+  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
+  labs(x = "Bennie et al", y = "Mesich et al") + 
+  theme_void() +
+  theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
+confusion_plot_bennie
+
 
 # Section 10: Baker et al comparison -----------------------------------------
 #my data
@@ -797,8 +826,6 @@ artio_df <- read.csv(here("sleepy_artiodactyla_full.csv")) #235 species with dat
 Baker_df <- read.csv(here("Baker_mam_data.csv"))
 
 Baker_df <- Baker_df[Baker_df$tips %in% artio_df$tips, ] #removes 5 sps
-# M rooseveltorum nor Sus bucculentus (both extinct) so drop, Bos frontalis and M gouazoupira not in mam tree
-# Alces americanus is a subspecies of Alces alces which is already in dataset
 
 Baker_df <- merge(Baker_df, artio_df, by = "tips", all.x = TRUE) #204 sps
 
@@ -846,6 +873,22 @@ Baker_sankey <-  Baker_df %>% make_long(Activity_pattern, Diel_Pattern) %>%
 Baker_sankey
 
 
+#concordance by activity pattern
+concordance <- as.data.frame(table(Baker_df$Activity_pattern, Baker_df$Diel_Pattern))
+colnames(concordance) <- c("actual", "predicted", "freq")
+totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
+colnames(totals_df) <- c("actual", "total")
+concordance <- merge(concordance, totals_df, by = "actual")
+concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
+
+confusion_plot_baker <-
+  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
+  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
+  labs(x = "Baker et al", y = "Mesich et al") + 
+  theme_void() +
+   theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_text(angle = 90))
+confusion_plot_baker 
+
 # Section: Number of matches plot -----------------------------------------
 #plot number of matches
 table(Baker_df$approx_match)
@@ -860,7 +903,7 @@ match_df <-  rbind(data.frame(table(Baker_df$approx_match)), data.frame(table(Ba
                    data.frame(table(Maor_diel$approx_match)), data.frame(table(Maor_diel$exact_match)))
 
 match_df$dataset <- c(rep("Baker", 4), rep("Bennie", 4), rep("Maor",4))
-match_df$match_type <- c(rep(c("Approx", "Approx", "Exact", "Exact"), 3))
+match_df$match_type <- c(rep(c("Approximate match", "Approximate match", "Exact match", "Exact match"), 3))
 match_df$total <- match_df %>% group_by(dataset, match_type) %>% summarize(sum = rep(sum(Freq),2)) %>% pull(sum)
 match_df$percent <- match_df$Freq/match_df$total
 match_df$dataset_matchtype <- paste(match_df$dataset, match_df$match_type, sep = "_")
@@ -877,29 +920,41 @@ matches_plot <-
 matches_plot2 <- 
   ggplot(match_df, aes(x = dataset_matchtype, y = Freq, fill = Var1)) + geom_col() +
   facet_wrap(~match_type, ncol = 1, scales = "free") +
-  scale_fill_manual(name = "", values = c("blue", "skyblue")) +
+  scale_fill_manual(name = "Match with current \ndataset", values = c("#070E8A","#2E9DFF"), labels = c("False", "True")) +
   labs(x = "", y = "Number of species") + theme_classic() + 
   scale_x_discrete(labels = c("Baker_Approx" = "Approximate \n match", "Baker_Exact" = "Exact \n match", "Bennie_Approx" = "Approximate \n match", "Bennie_Exact" = "Exact \n match","Maor_Approx" = "Approximate \n match", "Maor_Exact" = "Exact \n match")) +
   theme(strip.placement = "outside", strip.background = element_blank(),panel.spacing.x = unit(0, "pt"),
-        legend.position = "none", legend.position.inside = c(0.9,0.9), axis.text.x = element_blank())
+        legend.position = "bottom", legend.position.inside = c(0.9,0.9), axis.text.x = element_blank())
+
 
 
 # Section: Proportion plots -----------------------------------------------
 
-artio_df <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv")) #235 species with data
-artio_df <- artio_df %>% select(tips, Diel_Pattern)
+artio_df <- read.csv(here("Sleepy_artiodactyla_full.csv")) #235 species with data
 
 #Maor dataset
 Maor_diel <- read.csv(here("Maor_mam_data.csv")) 
+Maor_diel %>% filter(Order %in% c("Cetacea")) 
+cetacean_list <- Maor_diel %>% filter(Order %in% c("Cetacea")) %>% pull(tips)
 Maor_diel <- Maor_diel %>% filter(Order %in% c("Artiodactyla", "Cetacea")) %>% select("tips", "Maor_activity_pattern") #172 species
-  
+
+Maor_diel[!Maor_diel$tips %in% artio_df$tips, ]
+
 #Bennie dataset
 Bennie_diel <- read.csv(here("Bennie_mam_data.csv")) 
 Bennie_diel <- Bennie_diel %>% filter(Order == "Artiodactyla") %>% select("tips", "Bennie_activity_pattern") #235 sps  
 
+Bennie_diel[!Bennie_diel$tips %in% artio_df$tips, ]
+
 #Baker dataset
 Baker_df <- read.csv(here("Baker_mam_data.csv"))
+Baker_df %>% filter(Order %in% c("Cetacea")) #same species as in Maor
 Baker_df <- filter(Baker_df, Order %in% c("Artiodactyla", "Cetacea")) %>% select("tips", "Activity_pattern") #209
+
+Baker_df[!Baker_df$tips %in% artio_df$tips, ]
+
+#filter my dataset
+artio_df <- artio_df %>% filter(Parvorder == "non-cetacean" | tips %in% cetacean_list) %>% select(tips, Diel_Pattern) 
 
 mammals_df <- merge(Maor_diel, Bennie_diel, by = "tips", all = TRUE) #256 species
 mammals_df <- merge(mammals_df, Baker_df, by = "tips", all = TRUE) #260 species
@@ -923,48 +978,69 @@ mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/
 #call cathemeral/crepuscular species crepuscular
 mammals_df <- data.frame(lapply(mammals_df, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
 
-#test <-
 proportion_plot <-
   mammals_df %>% 
   pivot_longer(!tips, names_to = "dataset", values_to = "activity_pattern") %>%
   filter(!is.na(activity_pattern)) %>%
   ggplot(., aes(x = factor(dataset, levels = c("Baker_diel", "Bennie_diel", "Maor_diel",  "max_crep")), fill = activity_pattern)) + 
   geom_bar(position = "fill", alpha = 0.75) +
-  scale_fill_manual(name = "Activity pattern", values= c("#dd8ae7","#EECBAD", "#FC8D62","gold", "#66C2A5", "palegreen")) +
+  scale_fill_manual(name = "Temporal activity pattern", values= c("#dd8ae7","#EECBAD", "#FC8D62","gold", "#66C2A5", "palegreen"),
+                    labels = c("Cathemeral", "Crepuscular", "Diurnal", "Diurnal and crepusuclar", "Nocturnal", "Nocturnal and crepuscular")) +
   labs(y = "Proportion of total species", x = "Clade") + 
   #scale_x_discrete(labels = c("Bennie_diel" = "Bennie et al \n (n = 237)", "max_crep" = "Current \n dataset \n (n = 232)", "Maor_diel" = "Maor et al \n (n =173)", "Baker_diel" = "Baker et al \n (n =210)")) +
-  theme_classic() +
-  theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_blank(), axis.text.y = element_text(size = 9), panel.grid = element_blank())
+  theme_classic() + theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_blank(), axis.text.y = element_text(size = 9), panel.grid = element_blank())
 proportion_plot
 
 
 # Section: save out combined plots----------------------------------------------
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots0.pdf", width = 8.5, height = 3)
-(proportion_plot + matches_plot2)
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots0.pdf", width = 8.6, height = 3.5)
+(proportion_plot + theme(legend.position = "right")) + (matches_plot2 + theme(legend.position = "right")) +
+  guide_area() +
+  plot_layout(guides = 'collect', widths = c(0.9, 0.7, 0.4))
 dev.off()
 
 pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots1.pdf", width = 8.8, height = 4)
 Baker_sankey + Bennie_sankey + Maor_sankey2
 dev.off()
 
-(proportion_plot + matches_plot2)/
-  (Baker_sankey + Bennie_sankey + Maor_sankey2)
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots2.pdf", width = 8.5, height = 3)
+confusion_plot_baker + confusion_plot_bennie + confusion_plot_maor + plot_layout(widths = c(0.7, 1, 1.3))
+dev.off()
+
 # Section 11: Number of sources in each category-------------------------------------------------------
 test_diel_long <- read.csv(here("cetacean_confidence_long_final.csv"))
 sources_df <- as.data.frame(table(test_diel_long$column)) %>% mutate(Clade = "Cetacea")
 
 diel_full_long <- read.csv(here("artio_confidence_long_final.csv"))
-sources_df <- rbind(sources_df, (as.data.frame(table(diel_full_long$column))) %>% mutate(Clade = "Terrestrial Artiodactyla"))
-sources_df
+sources_df <- rbind(sources_df, (as.data.frame(table(diel_full_long$column))) %>% mutate(Clade = "Terrestrial \nartiodactyls"))
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/source_count_barchart.pdf", height = 3, width = 4)
-ggplot(sources_df, aes(x = Var1, y = Freq, fill = Clade)) + geom_col(position = position_dodge()) +
-  labs(y = "Count", x = "Data category") + theme_bw() + scale_fill_manual(values = c("#070E8A","#2E9DFF")) +
-  scale_x_discrete(labels = c("A", "B", "C", "D", "E")) + 
-  theme(panel.grid = element_blank(), legend.position = "bottom")
+number_sources <- ggplot(sources_df, aes(x = Var1, y = Freq, fill = Clade)) + geom_col(position = position_dodge()) +
+  labs(y = "Number of sources", x = "Data category") + theme_classic() + scale_fill_manual(values = c("#070E8A","#2E9DFF")) +
+  scale_x_discrete(labels = c("A", "B", "C", "D", "E")) +
+  theme(panel.grid = element_blank(), legend.position = "none")
+
+#plot number of sources per species
+sources_df <- as.data.frame(table(test_diel_long$Species_name)) %>% mutate(Clade = "Cetacea")
+sources_df <- rbind(sources_df, (as.data.frame(table(diel_full_long$Species_name))) %>% mutate(Clade = "Terrestrial \nartiodactyls"))
+
+#more than six group together
+sources_df <- sources_df %>% mutate(Freq = case_when(Freq > 6 ~ 7,
+                                                     Freq <= 6 ~ Freq))
+
+total_sources <- sources_df %>% group_by(Clade, Freq) %>% summarize(Freq = Freq, total_species = n()) %>%
+  ggplot(., aes(x = Freq, y = total_species, fill = Clade)) +
+    geom_col(position = position_dodge()) +
+    #geom_histogram(position = position_dodge(width = 0.9), binwidth = 1, bins = 7) +
+  labs(y = "Number of species", x = "Number of sources per species") + theme_classic() + scale_fill_manual(values = c("#070E8A","#2E9DFF")) +
+  scale_x_continuous(breaks = 1:7, labels = c(1,2,3,4,5,6, "7 or more")) +
+  theme(panel.grid = element_blank(), legend.position = "inside", legend.position.inside = c(0.85, 0.8))
+total_sources
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/source_count_barchart.pdf", height = 2.5, width = 8)
+number_sources + total_sources 
 dev.off()
- 
+
 # Section 12: Cetacean and ruminant df with sources -------------------------------------
 
 #cetaceans
@@ -1058,9 +1134,4 @@ pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey
 (sankey_crep_cet + coord_flip()) + plot_spacer() + (sankey_crep_cet + coord_flip()) + plot_layout(width = c(5, 0.2, 5))
 dev.off()
 
-
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_confusion_plots.pdf", width = 8.5, height = 11, bg = "transparent")
-# (plot_countfreq_cet + plot_countfreq_rum)/
-#   ((sankey_cet + coord_flip()) + (sankey_rum + coord_flip())) + plot_layout(height = c(3, 8))
-# dev.off()
 

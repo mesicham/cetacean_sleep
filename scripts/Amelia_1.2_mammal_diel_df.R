@@ -10,9 +10,9 @@ Bennie_mam_data$SpeciesBehaviourReference <- str_replace(string = Bennie_mam_dat
 Bennie_mam_data <- separate(Bennie_mam_data, col = SpeciesBehaviourReference, into = c("tips", "max_crep", "Reference"), sep = " ")
 Bennie_mam_data$max_crep <- tolower(Bennie_mam_data$max_crep)
 Bennie_mam_data$Species_name <- str_replace(string = Bennie_mam_data$tips, pattern = "_", replacement  = " ")
-Bennie_mam_data <- Bennie_mam_data[1:4477, c("tips", "max_crep", "Species_name") ]
+Bennie_mam_data <- Bennie_mam_data[1:4477, c("tips", "max_crep", "Species_name", "Reference") ]
 
-resolved_names <- tnrs_match_names(names = trait.data$Species_name, context_name = "Vertebrates", do_approximate_matching = TRUE)
+resolved_names <- tnrs_match_names(names = Bennie_mam_data$Species_name, context_name = "Vertebrates", do_approximate_matching = TRUE)
 missing_names <- resolved_names[is.na(resolved_names$ott_id), ] #40 names not found
 resolved_names <- resolved_names[!is.na(resolved_names$ott_id), ] #returns 4437 names 
 
@@ -105,7 +105,18 @@ trait.data[trait.data$Family %in% c("Petauridae"), "Order"] <- "Diprotodontia"
 trait.data[trait.data$tips == "Tadarida_sarasinorum", "Family"] <- "Molossidae"
 trait.data[trait.data$tips == "Tadarida_sarasinorum", "Order"] <- "Chiroptera"
   
-colnames(trait.data) <- c("Species_name", "tips", "Bennie_activity_pattern", "Order", "Family", "Genus")
+colnames(trait.data) <- c("Species_name", "tips", "Bennie_activity_pattern", "Reference", "Order", "Family", "Genus")
+
+#replace alternative taxonomic names to match my dataset, just for artiodactyla
+trait.data[trait.data$tips == "Alces_americanus", "tips"] <- "Alces_alces"
+trait.data[trait.data$tips == "Capricornis_milneedwardsii", "tips"] <- "Capricornis_sumatraensis"
+trait.data[trait.data$tips == "Przewalskium_albirostris", "tips"] <- "Cervus_albirostris"
+trait.data[trait.data$tips == "Pseudois_schaeferi", "tips"] <- "Pseudois_nayaur"
+
+#subspecies, don't include unless parent species is not in their dataset
+# trait.data[trait.data$tips == "Sus_bucculentus", "tips"] <- "Sus scrofa"
+# trait.data[trait.data$tips == "Muntiacus_montanus", "tips"] <- "Muntiacus_muntjak"
+# trait.data[trait.data$tips == "Pecari_maximus", "tips"] <- "Pecari_tajacu"
 
 #save out Bennie mammal data, 4477 species
 write.csv(trait.data, here("Bennie_mam_data.csv"), row.names = FALSE)
@@ -176,8 +187,22 @@ maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activi
 maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "nocturnal/diurnal/crepuscular", "diurnal/nocturnal/crepuscular")
 maor_mam_data$Maor_activity_pattern <- str_replace_all(maor_mam_data$Maor_activity_pattern, "cathemeral/nocturnal/diurnal/crepuscular", "cathemeral/diurnal/nocturnal/crepuscular")
 
+#replace alternative taxonomic names to match my dataset, just for artiodactyla
+maor_mam_data[maor_mam_data$tips == "Capricornis_milneedwardsii", "tips"] <- "Capricornis_sumatraensis"
+maor_mam_data[maor_mam_data$tips == "Hemitragus_hylocrius", "tips"] <- "Nilgiritragus_hylocrius"
+maor_mam_data[maor_mam_data$tips == "Hemitragus_jayakari", "tips"] <- "Arabitragus_jayakari"
+maor_mam_data[maor_mam_data$tips == "Hexaprotodon_liberiensis", "tips"] <- "Choeropsis_liberiensis"
+maor_mam_data[maor_mam_data$tips == "Neotragus_moschatus", "tips"] <- "Nesotragus_moschatus"
+maor_mam_data[maor_mam_data$tips == "Pseudois_schaeferi", "tips"] <- "Pseudois_nayaur"
+maor_mam_data[maor_mam_data$tips == "Sus_salvanius", "tips"] <- "Porcula_salvania"
+maor_mam_data[maor_mam_data$tips == "Taurotragus_oryx", "tips"] <- "Tragelaphus_oryx"
+
+#subspecies, don't include unless parent species is not in their dataset
+#maor_mam_data[maor_mam_data$tips == "Alcelaphus_lichtensteinii", "tips"] <- "Alcelaphus_buselaphus"
+
 #save out Maor dataframe, 2416 species
 write.csv(maor_mam_data, here("Maor_mam_data.csv"), row.names  = FALSE)
+
 
 # Section 3: Baker dataframe ----------------------------------------------
 
@@ -197,6 +222,11 @@ Baker_df[Baker_df$tips == "Rucervus_eldi", "tips"] <- "Rucervus_eldii"
 Baker_df[Baker_df$tips == "Saiga_borealis", "tips"] <- "Saiga_tatarica"
 Baker_df[Baker_df$tips == "Sus_salvanius", "tips"] <- "Porcula_salvania"
 Baker_df[Baker_df$tips == "Taurotragus_derbianus", "tips"] <- "Tragelaphus_derbianus"
+Baker_df[Baker_df$tips == "Alces_americanus", "tips"] <- "Alces_alces"
+Baker_df[Baker_df$tips == "Mazama_gouazoupira", "tips"] <- "Mazama_gouazoubira"
+
+#don't include subspecies unless parent species is not in the dataset
+#Baker_df[Baker_df$tips == "Sus_bucculentus", "tips"] <- "Sus_scrofa"
 
 Baker_df <- Baker_df %>% select(tips, Order, Activity_pattern)
 

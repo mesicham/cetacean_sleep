@@ -503,14 +503,11 @@ confusion_plot_cet <-
   ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
   scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
   labs(x = "Actual (final activity pattern)", y = "Predicted (activity pattern of individual source)") + 
-  theme_void() +
+  theme_classic() +
   scale_x_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
   scale_y_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.title = element_text(size = 11))
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacean_all_conf_levels_confusion_matrix.pdf", width = 4, height = 2)
-confusion_plot_cet 
-dev.off()
 
 # Section 4.5: Concordance between confidence levels ----------------------
 diel_full_long <- read.csv(here("cetacean_confidence_long_df.csv"))
