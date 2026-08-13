@@ -1739,3 +1739,122 @@ Maor_six_state_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, nex
   theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
 
 Maor_six_state_sankey
+
+# Section 3: How well do these sources agree (bennie vs maor)? -----------------------------
+Bennie_mam_data <- read.csv(here("Bennie_mam_data.csv"))
+maor_mam_data <- read.csv(here("Maor_mam_data.csv"))
+
+diel_merge <- merge(Bennie_mam_data, maor_mam_data,by="tips") %>% select("tips", "Bennie_activity_pattern", "Order.x", "Family.x", "Maor_activity_pattern")
+colnames(diel_merge) <- c("Species", "Bennie_diel", "Order", "Family", "Maor_diel")
+
+#set default to idk
+diel_merge$match <- "Unknown"
+
+for(i in 1:length(diel_merge$Species)){
+  if(diel_merge[i, "Bennie_diel"] == diel_merge[i, "Maor_diel"]){
+    diel_merge[i, "match"] <- "Yes"
+  } else if(diel_merge[i, "Bennie_diel"] %in% c("diurnal/crepuscular", "crepuscular", "cathemeral/crepuscular", "diurnal") & diel_merge[i, "Maor_diel"] %in% c("diurnal/crepuscular", "crepuscular", "cathemeral/crepuscular", "diurnal")){
+    diel_merge[i, "match"] <- "Approximate"
+  } else if(diel_merge[i, "Bennie_diel"] %in% c("nocturnal/crepuscular", "crepuscular", "cathemeral/crepuscular", "nocturnal")& diel_merge[i, "Maor_diel"] %in% c("nocturnal/crepuscular", "crepuscular", "cathemeral/crepuscular", "nocturnal")){
+    diel_merge[i, "match"] <- "Approximate"
+  } else if(diel_merge[i, "Bennie_diel"] %in% c("cathemeral", "cathemeral/crepuscular")& diel_merge[i, "Maor_diel"] %in% c("cathemeral", "cathemeral/crepuscular")){
+    diel_merge[i, "match"] <- "Approximate"
+  } else {
+    diel_merge[i, "match"] <- "No"
+  }
+}
+
+table(diel_merge$match)
+
+#A surprising amount of consistency!
+#170/2199 approximate matches, 244/2199 no matches, and 1785/2199 yes matches
+#81% match!
+diel_table <- diel_merge %>% count(match)
+diel_table <- transform(diel_table, percent = (n/sum(diel_table$n)) * 100)
+
+diel_table <- trait.data.all %>% count(Confidence)
+diel_table <- transform(diel_table, percent = (n/sum(diel_table$n)) * 100)
+
+ggplot(diel_table, aes(x="", y=n)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) + theme_void()
+
+#which species did not match
+mismatch_species <- diel_merge %>% filter(match == "No")
+table(mismatch_species$Bennie_diel, mismatch_species$Maor_diel)
+#we should clean some of these entries up, could be a formatting error in why they don't match
+
+#plot this on the mammal tree, which species tend to have conflicting data?
+mam.tree <- readRDS(here("maxCladeCred_mammal_tree.rds"))
+trait.data <- mismatch_species[,1:2]
+trait.data <- trait.data[trait.data$Species %in% mam.tree$tip.label,]
+trpy_n_mam <- keep.tip(mam.tree, tip = trait.data$Species)
+ggtree(trpy_n_mam, layout = "circular") + geom_tiplab(size = 3)
+
+#seem to be distributed throughout the tree
+
+#get taxonomic information from Maor et al
+maor_mam_data <- read_excel(here("Maor_diel_activity_data.xlsx"))
+maor_mam_data <- maor_mam_data[17:nrow(maor_mam_data), 1:3]
+colnames(maor_mam_data) <- c("Order", "Family", "tips")
+maor_mam_data$tips <- str_replace(maor_mam_data$tips, pattern = " ", replacement = "_")
+
+#diel_merge currently has 2,199 species
+diel_merge <- merge(diel_merge, maor_mam_data, by = "tips") #now is 3,129 species
+diel_merge <- diel_merge[!duplicated(diel_merge$tips),] #remove duplicates, back to 2,199
+
+#save out the final 
+colnames(diel_merge) <- c("tips", "Bennie_diel", "Bennie_source", "Maor_diel", "Maor_source", "match", "Order", "Family")
+#write.csv(diel_merge, here("sleepy_mammals_old.csv"))
+
+# Section 9: Full table of activity patterns (supplemental) --------------
+
+artio_full <- read.csv(here("sleepy_artiodactyla_full.csv"),)
+artio_full <- artio_full[, c("Species_name", "Suborder", "Diel_Pattern")]
+
+#add in NA artio species since they got removed in the previous step
+url <- 'https://docs.google.com/spreadsheets/d/1JGC7NZE_S36-IgUWpXBYyl2sgnBHb40DGnwPg2_F40M/edit?gid=562902012#gid=562902012'
+diel_full <- read.csv(text=gsheet2text(url, format='csv'), stringsAsFactors=FALSE)
+diel_full <- diel_full[is.na(diel_full$Confidence_primary_source), c("Species_name", "Diel_Pattern_primary")]
+diel_full[diel_full == ""] <- NA
+diel_full$Suborder <- "Ruminantia" #they are all ruminants
+colnames(diel_full) <- c("Species_name", "Diel_Pattern", "Suborder")
+diel_full <- diel_full %>% relocate(Diel_Pattern, .after = Suborder)
+
+artio_full <- rbind(artio_full, diel_full)
+artio_full$Diel_Pattern <- str_to_title(artio_full$Diel_Pattern)
+
+test <- artio_full %>% count(Diel_Pattern)
+test1 <- artio_full %>% filter(Suborder == "Whippomorpha") %>% count(Diel_Pattern)
+test2 <- artio_full %>% filter(Suborder == "Ruminantia") %>% count(Diel_Pattern)
+test3 <- artio_full %>% filter(Suborder == "Suina") %>% count(Diel_Pattern) #there are only 20sps
+test4 <- artio_full %>% filter(Suborder == "Tylopoda") %>% count(Diel_Pattern) #there are only 6sps
+
+test <- rbind(test, test1, test2, test3, test4)
+test$Clade <- c(rep("All artiodactyla", 7), rep("Whippomorpha", 7), rep("Ruminantia", 7), rep("Suina", 6), rep("Tylopoda", 2))
+test[is.na(test)] <- "Unknown"
+test <- test %>% pivot_wider(names_from = Diel_Pattern, values_from = n)
+test[is.na(test)] <- 0
+
+knitr::kable(test, format = "html", digits = 3, caption = "Table 1") %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("table_final.html")
+webshot("table_final.html", file = "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Supplemental_diel_pattern_chart.pdf")
+
+#with max crep categories
+artio_full$Diel_Pattern <- str_replace(artio_full$Diel_Pattern, pattern = "Diurnal/Crepuscular", replacement = "Crepuscular")
+artio_full$Diel_Pattern <- str_replace(artio_full$Diel_Pattern, pattern = "Cathemeral/Crepuscular", replacement = "Crepuscular")
+artio_full$Diel_Pattern <- str_replace(artio_full$Diel_Pattern, pattern = "Nocturnal/Crepuscular", replacement = "Crepuscular")
+
+test <- artio_full %>% count(Diel_Pattern)
+test1 <- artio_full %>% filter(Suborder == "Whippomorpha") %>% count(Diel_Pattern)
+test2 <- artio_full %>% filter(Suborder == "Ruminantia") %>% count(Diel_Pattern)
+test3 <- artio_full %>% filter(Suborder == "Suina") %>% count(Diel_Pattern) #there are only 20sps
+test4 <- artio_full %>% filter(Suborder == "Tylopoda") %>% count(Diel_Pattern) #there are only 6sps
+
+test <- rbind(test, test1, test2, test3, test4)
+test$Clade <- c(rep("All artiodactyla", 5), rep("Whippomorpha", 5), rep("Ruminantia", 5), rep("Suina", 4), rep("Tylopoda", 2))
+test[is.na(test)] <- "Unknown"
+test <- test %>% pivot_wider(names_from = Diel_Pattern, values_from = n)
+test[is.na(test)] <- 0
+
+knitr::kable(test, format = "html", digits = 3, caption = "Table 1") %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("table_final.html")
+webshot("table_final.html", file = "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Diel_pattern_chart.pdf")

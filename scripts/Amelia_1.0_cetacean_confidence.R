@@ -148,7 +148,7 @@ write.csv(diel_full_long, file = here("cetacean_confidence_long_df.csv"), row.na
 
 #read in the confidence data in long format
 test_diel_long <- read.csv(here("cetacean_confidence_long_df.csv"))
- 
+
 #take only the first part of the column name (ie conf1, conf2)
 test_diel_long$column <- gsub("\\..*","",test_diel_long$column)
 #we won't worry about different types of level 3 and level 2 evidence
@@ -378,7 +378,7 @@ test2 <- test_diel_long %>% filter(column %in% c("Conf2", "Conf3", "Conf4", "Con
                                     percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
                                     percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
                                     percent_crep == 50 & Conf2 == 50 ~ "crepuscular"
-                                    ))
+  ))
 
 matches <- crep_df[crep_df$Species_name %in% test2$Species_name, "tabulated_crep"] == test2[, c("tabulated_crep")]
 test2[!matches,]
@@ -591,7 +591,9 @@ table2$count <- table
 
 #want to make a plot that has both the frequency and the counts
 table2$freq_count <- paste0((round(table2$Freq, 2) * 100), "%", "\n", "(n=", table2$count, ")")
-plot_countfreq_cet_myst <-  
+#plot_countfreq_cet_myst <- 
+#plot_countfreq_cet_odont <- 
+plot_countfreq_cet <- 
   table2[c(1:4, 5:7, 10:12, 16:17, 21), ] %>% #for odontocetes
   #table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>% 
   ggplot(., aes(x = Comp1, y = Comp2, fill = Freq, label = freq_count)) +
@@ -601,15 +603,9 @@ plot_countfreq_cet_myst <-
   scale_y_discrete(labels = c("A", "B", "C", "D", "E")) +
   theme(legend.position = "none")
 
-#pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance.pdf", width = 7, height = 7, bg = "transparent")
-#pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance_odontoceti.pdf", width = 7, height = 7, bg = "transparent")
-#pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cetacaean_btw_source_concordance_mysticeti.pdf", width = 7, height = 7, bg = "transparent")
-plot_countfreq_cet
-#dev.off()
-
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/parvorder_category_confusion_plots.pdf", width = 8.5, height = 3)
-plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
-dev.off()
+# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/parvorder_category_confusion_plots.pdf", width = 8.5, height = 3)
+# plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
+# dev.off()
 
 # Section 5: Concordance sankey -------------------------------------------
 

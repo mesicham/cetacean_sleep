@@ -296,25 +296,25 @@ test2 <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Con
   merge(., test[, c(1:6)], by = "Species_name") %>%
   mutate(tabulated_crep = case_when(
     #Conf4 >= 20 ~ "conf4_crepuscular",
-                                    percent_crep > 50  ~ "crepuscular",
-                                    percent_crep < 50  ~ "non",
-                                    percent_crep == 50 ~ "tie" #when there is a tie use higher confidence source as tiebreaker
-                                    # percent_crep == 50 & Conf3 >= 50 & Conf2 <= 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf3 <= 50 & Conf2 >= 50 ~ "non",
-                                    # percent_crep == 50 & Conf3 >= 50 & Conf4 < 20 ~ "non",
-                                    # percent_crep == 50 & Conf2 >= 50 & Conf1 < 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf2 <= 50 & Conf1 >= 50 ~ "non",
-                                    # percent_crep == 50 & Conf4 >= 50 & Conf1 <= 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf4 <= 50 & Conf1 >= 50 ~ "non",
-                                    # percent_crep == 50 & Conf3 >= 50 & Conf1 <= 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf3 <= 50 & Conf1 >= 50 ~ "non",
-                                    # # #if the sources are in the same confidence level, evaluate to crep
-                                    # percent_crep == 50 & Conf5 == 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf2 == 50 ~ "crepuscular",
-                                    # percent_crep == 50 & Conf1 == 50 ~ "crepuscular"
-                                    ))
+    percent_crep > 50  ~ "crepuscular",
+    percent_crep < 50  ~ "non",
+    percent_crep == 50 ~ "tie" #when there is a tie use higher confidence source as tiebreaker
+    # percent_crep == 50 & Conf3 >= 50 & Conf2 <= 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf3 <= 50 & Conf2 >= 50 ~ "non",
+    # percent_crep == 50 & Conf3 >= 50 & Conf4 < 20 ~ "non",
+    # percent_crep == 50 & Conf2 >= 50 & Conf1 < 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf2 <= 50 & Conf1 >= 50 ~ "non",
+    # percent_crep == 50 & Conf4 >= 50 & Conf1 <= 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf4 <= 50 & Conf1 >= 50 ~ "non",
+    # percent_crep == 50 & Conf3 >= 50 & Conf1 <= 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf3 <= 50 & Conf1 >= 50 ~ "non",
+    # # #if the sources are in the same confidence level, evaluate to crep
+    # percent_crep == 50 & Conf5 == 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf2 == 50 ~ "crepuscular",
+    # percent_crep == 50 & Conf1 == 50 ~ "crepuscular"
+  ))
 
 matches <- crep_df[crep_df$Species_name %in% test2$Species_name, "tabulated_crep"] == test2[, c("tabulated_crep")]
 test2[!matches,]
@@ -343,12 +343,14 @@ current_dataset <- current_dataset[current_dataset$tips %in% mam.tree$tip.label,
 all(previous_dataset == current_dataset)
 if(all(previous_dataset == current_dataset) == FALSE) stop("Dataset is not the same!")
 
+current_dataset[previous_dataset$tabulated_diel != current_dataset$tabulated_diel,]
+
+
 #add a column for tips, formatted as the species names appear in the phylogenetic tree
 final_df$tips <- str_replace(final_df$Species_name, pattern = " ", replacement = "_")
 
 #save out the new tabulated activity pattern dataframe
 write.csv(final_df, here("artio_tabulated_full.csv"), row.names = FALSE)
-
 
 # Section 4: Save out artiodactyla dataframe with taxonomic and confidence info ------------------------
 #load in the full dataset 113 species. Should be 235 with data and 255 total. 232 with data in final tree
@@ -519,12 +521,6 @@ plot_countfreq_rum <- table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>%
 
 plot_countfreq_rum
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/artio_btw_source_concordance.pdf", width = 7, height = 7, bg = "transparent")
-#pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ruminant_btw_source_concordance.pdf", width = 7, height = 7, bg = "transparent")
-plot_countfreq_rum
-dev.off()
-
-
 # Section 6: Concordance within confidence levels artio/ruminants -------------------------
 diel_full_long <- read.csv(here("confidence_artio_long.csv"))
 #read in the tabulated activity patterns
@@ -655,360 +651,7 @@ pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ruminant_crep_f
 sankey_crep_rum + coord_flip()
 dev.off()
 
-# Section 9: Maor data comparison ---------------------------------------------
-
-#my data
-artio_df <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv")) #235 species with data
-artio_df <- artio_df %>% select(Species_name, Diel_Pattern, max_crep, tips)
-
-#Maor dataset
-Maor_diel <- read.csv(here("Maor_mam_data.csv")) 
-Maor_diel <- Maor_diel[Maor_diel$tips %in% artio_df$tips, ] #154 when filtering for those in my dataframe
-
-unique(Maor_diel$Maor_activity_pattern)
-
-#merge my artiodactyla data with the mammal data
-Maor_diel <- merge(Maor_diel, artio_df, by = "tips", all.x = TRUE)  
-
-df <- Maor_diel %>% make_long(Maor_activity_pattern, Diel_Pattern) %>% mutate(node = str_to_title(node), next_node = str_to_title(next_node))
-
-Maor_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
-  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 4, color = 1, fill = "white") +
-  #scale_fill_manual(values = custom.colours) +
-  theme_sankey(base_size = 12) +
-  scale_x_discrete(labels = c("Diel_pattern" = "Maor et al \n (n = 193)", "Diel_Pattern" = "Current \ndataset"), expand = expansion(0,0.3)) +
-  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), axis.text = element_text(size = 13), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
-
-Maor_diel$exact_match <- Maor_diel$Maor_activity_pattern == Maor_diel$Diel_Pattern
-
-#function Max wrote for comparing entries, splits and compares each segment
-compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
-  
-  if(any(is.na(c(comp1, comp2)))) {
-    return(NA)
-  } else {
-    #splits any entries with a backslash into two components (ie nocturnal/crepuscular into nocturnal and crepuscular)
-    comp1 <- str_split(comp1, "/")[[1]]
-    comp2 <- str_split(comp2, "/")[[1]]
-    #then compares if any of the components match
-    if(any(comp1 %in% comp2)) {
-      return(TRUE)
-    } else {
-      return(FALSE)
-    }
-  }
-  
-}
-
-Maor_diel$approx_match <- "Unknown"
-
-for(i in 1:nrow(Maor_diel)){
-  Maor_diel[i, "approx_match"] <- compTwo(comp1 = Maor_diel[i, "Maor_activity_pattern"], comp2 =  Maor_diel[i, "Diel_Pattern"])
-}
-
-#version with maximum crepuscular and cathemeral classifications
-unique(mammals_df$Maor_diel)
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "cathemeral/nocturnal/crepuscular", replacement = "cathemeral/crepuscular")
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "cathemeral/diurnal/nocturnal/crepuscular", replacement = "cathemeral/crepuscular")
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "cathemeral/diurnal/crepuscular/ultradian", replacement = "cathemeral/crepuscular")
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "diurnal/nocturnal/crepuscular", replacement = "cathemeral/crepuscular")
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "cathemeral/diurnal/crepuscular", replacement = "cathemeral/crepuscular")
-
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "diurnal/nocturnal", replacement = "cathemeral")
-Maor_diel$Maor_activity_pattern <- str_replace(Maor_diel$Maor_activity_pattern, pattern = "cathemeral/diurnal", replacement = "cathemeral")
-Maor_diel$Maor_activity_pattern<- str_replace(Maor_diel$Maor_activity_pattern, pattern = "cathemeral/nocturnal", replacement = "cathemeral")
-
-Maor_diel <- data.frame(lapply(Maor_diel, function(x) {gsub("cathemeral/crepuscular", "Crepuscular", x)}))
-Maor_diel <- Maor_diel %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Maor_activity_pattern = str_to_title(Maor_activity_pattern))
-Maor_diel <- data.frame(lapply(Maor_diel, function(x) {gsub("/C", " and\nc", x)}))
-
-Maor_sankey2 <-  Maor_diel %>% make_long(Maor_activity_pattern, Diel_Pattern) %>%
-  ggplot(., aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
-  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.3, color = 1, fill = "white") +
-  scale_fill_manual(values = c("#dd8ae7","#EECBAD" , "#FC8D62", "gold", "#66C2A5",  "palegreen")) +
-  theme_sankey(base_size = 12) +
-  scale_x_discrete(labels = c("Diel_pattern" = "Maor et al \n (n = 193)", "Diel_Pattern" = "Current \ndataset"), expand = expansion(0,0.3)) +
-  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), axis.text = element_text(size = 13), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
-
-Maor_sankey2 
-
-#concordance by activity pattern
-concordance <- as.data.frame(table(Maor_diel$Maor_activity_pattern, Maor_diel$Diel_Pattern))
-colnames(concordance) <- c("actual", "predicted", "freq")
-totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
-colnames(totals_df) <- c("actual", "total")
-concordance <- merge(concordance, totals_df, by = "actual")
-concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
-
-confusion_plot_maor <-
-  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
-  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Maor et al", y = "Mesich et al") + 
-  theme_void() +
-  theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45 ,
-                                                                                                 hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
-confusion_plot_maor
-
-# Section : Bennie et al data comparison ----------------------------------
-#my data
-artio_df <- read.csv(here("sleepy_artiodactyla_full.csv")) #235 species with data
-artio_df <- artio_df %>% select(Species_name, Diel_Pattern, max_crep, tips)
-
-#Bennie dataset
-Bennie_diel <- read.csv(here("Bennie_mam_data.csv")) #447 species
-Bennie_diel <- Bennie_diel[Bennie_diel$tips %in% artio_df$tips, ] #224 sps when filtering for those in my dataframe 
-
-#merge my artiodactyla data with the mammal data
-Bennie_diel <- merge(Bennie_diel, artio_df, by = "tips", all.x = TRUE) 
-Bennie_diel$exact_match <- Bennie_diel$Bennie_activity_pattern == Bennie_diel$Diel_Pattern
-
-#function Max wrote for comparing entries, splits and compares each segment
-compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
-  
-  if(any(is.na(c(comp1, comp2)))) {
-    return(NA)
-  } else {
-    #splits any entries with a backslash into two components (ie nocturnal/crepuscular into nocturnal and crepuscular)
-    comp1 <- str_split(comp1, "/")[[1]]
-    comp2 <- str_split(comp2, "/")[[1]]
-    #then compares if any of the components match
-    if(any(comp1 %in% comp2)) {
-      return(TRUE)
-    } else {
-      return(FALSE)
-    }
-  }
-  
-}
-
-Bennie_diel$approx_match <- "Unknown"
-
-for(i in 1:nrow(Bennie_diel)){
-  Bennie_diel[i, "approx_match"] <- compTwo(comp1 = Bennie_diel[i, "Bennie_activity_pattern"], comp2 =  Bennie_diel[i, "Diel_Pattern"])
-}
-
-Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("cathemeral/crepuscular", "Crepuscular", x)}))
-Bennie_diel <- Bennie_diel %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Bennie_activity_pattern = str_to_title(Bennie_activity_pattern))
-Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("/C", " and\nc", x)}))
-
-Bennie_sankey <- Bennie_diel %>% make_long(Bennie_activity_pattern, Diel_Pattern) %>%
-  ggplot(., aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
-  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.3, color = 1, fill = "white") + 
-  scale_fill_manual(values = c("#dd8ae7","#EECBAD", "#FC8D62", "#66C2A5", "gold", "palegreen")) +
-  theme_sankey(base_size = 12) +
-  scale_x_discrete(labels = c("Bennie_activity_pattern" = "Bennie et al \n (n = 224)", "Diel_Pattern" = "Current \ndataset"), expand = expansion(0,0.3)) +
-  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), axis.text = element_text(size = 13), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
-
-Bennie_sankey
-
-#concordance by activity pattern
-concordance <- as.data.frame(table(Bennie_diel$Bennie_activity_pattern, Bennie_diel$Diel_Pattern))
-colnames(concordance) <- c("actual", "predicted", "freq")
-totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
-colnames(totals_df) <- c("actual", "total")
-concordance <- merge(concordance, totals_df, by = "actual")
-concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
-
-confusion_plot_bennie <-
-  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
-  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Bennie et al", y = "Mesich et al") + 
-  theme_void() +
-  theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
-confusion_plot_bennie
-
-
-# Section 10: Baker et al comparison -----------------------------------------
-#my data
-artio_df <- read.csv(here("sleepy_artiodactyla_full.csv")) #235 species with data
-
-#Baker et al dataset, a combination of primary data (200sps), the Bennie et al dataset and pantheria
-Baker_df <- read.csv(here("Baker_mam_data.csv"))
-
-Baker_df <- Baker_df[Baker_df$tips %in% artio_df$tips, ] #removes 5 sps
-
-Baker_df <- merge(Baker_df, artio_df, by = "tips", all.x = TRUE) #204 sps
-
-Baker_df$exact_match <- Baker_df$Activity_pattern == Baker_df$Diel_Pattern
-
-#function Max wrote for comparing entries, splits and compares each segment
-compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
-  
-  if(any(is.na(c(comp1, comp2)))) {
-    return(NA)
-  } else {
-    #splits any entries with a backslash into two components (ie nocturnal/crepuscular into nocturnal and crepuscular)
-    comp1 <- str_split(comp1, "/")[[1]]
-    comp2 <- str_split(comp2, "/")[[1]]
-    #then compares if any of the components match
-    if(any(comp1 %in% comp2)) {
-      return(TRUE)
-    } else {
-      return(FALSE)
-    }
-  }
-  
-}
-
-Baker_df$approx_match <- "Unknown"
-
-for(i in 1:nrow(Baker_df)){
-  Baker_df[i, "approx_match"] <- compTwo(comp1 = Baker_df[i, "Activity_pattern"], comp2 =  Baker_df[i, "Diel_Pattern"])
-}
-
-#optional: convert cathemeral/crepuscular species to just crepuscular
-Baker_df <- data.frame(lapply(Baker_df, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
-Baker_df <- Baker_df %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Activity_pattern = str_to_title(Activity_pattern))
-Baker_df <- data.frame(lapply(Baker_df, function(x) {gsub("/C", " and\n c", x)}))
-
-Baker_sankey <-  Baker_df %>% make_long(Activity_pattern, Diel_Pattern) %>%
-  ggplot(., aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
-  geom_sankey(flow.alpha= 0.5, node.color = 1) + 
-  geom_sankey_label(size = 3.3, color = 1, fill = "white", width = 0.1) + 
-  scale_fill_manual(values = c("#dd8ae7", "#FC8D62", "#66C2A5","#EECBAD", "gold", "palegreen")) +
-  theme_sankey(base_size = 12) +
-  scale_x_discrete(labels = c("Activity_pattern" = "Existing dataset \n (Baker et al)", "Diel_Pattern" = "Current \ndataset"), expand = expansion(0,0.3)) +
-  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), axis.text = element_text(size = 13), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
-
-Baker_sankey
-
-
-#concordance by activity pattern
-concordance <- as.data.frame(table(Baker_df$Activity_pattern, Baker_df$Diel_Pattern))
-colnames(concordance) <- c("actual", "predicted", "freq")
-totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
-colnames(totals_df) <- c("actual", "total")
-concordance <- merge(concordance, totals_df, by = "actual")
-concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
-
-confusion_plot_baker <-
-  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
-  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Baker et al", y = "Mesich et al") + 
-  theme_void() +
-   theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_text(angle = 90))
-confusion_plot_baker 
-
-# Section: Number of matches plot -----------------------------------------
-#plot number of matches
-table(Baker_df$approx_match)
-table(Baker_df$exact_match)
-table(Maor_diel$approx_match)
-table(Maor_diel$exact_match)
-table(Bennie_diel$approx_match)
-table(Bennie_diel$exact_match)
-
-match_df <-  rbind(data.frame(table(Baker_df$approx_match)), data.frame(table(Baker_df$exact_match)),
-                   data.frame(table(Bennie_diel$approx_match)), data.frame(table(Bennie_diel$exact_match)),
-                   data.frame(table(Maor_diel$approx_match)), data.frame(table(Maor_diel$exact_match)))
-
-match_df$dataset <- c(rep("Baker", 4), rep("Bennie", 4), rep("Maor",4))
-match_df$match_type <- c(rep(c("Approximate match", "Approximate match", "Exact match", "Exact match"), 3))
-match_df$total <- match_df %>% group_by(dataset, match_type) %>% summarize(sum = rep(sum(Freq),2)) %>% pull(sum)
-match_df$percent <- match_df$Freq/match_df$total
-match_df$dataset_matchtype <- paste(match_df$dataset, match_df$match_type, sep = "_")
-
-matches_plot <- 
-  ggplot(match_df, aes(x = dataset_matchtype, y = Freq, fill = Var1)) + geom_col() +
-  facet_grid(~dataset, scales = "free_x", space = "free_x", switch = "x") +
-  scale_fill_manual(name = "", values = c("blue", "skyblue")) +
-  labs(x = "", y = "Number of species") + theme_classic() + 
-    scale_x_discrete(labels = c("Baker_Approx" = "Approximate \n match", "Baker_Exact" = "Exact \n match", "Bennie_Approx" = "Approximate \n match", "Bennie_Exact" = "Exact \n match","Maor_Approx" = "Approximate \n match", "Maor_Exact" = "Exact \n match")) +
-  theme(strip.placement = "outside", strip.background = element_blank(),panel.spacing.x = unit(0, "pt"),
-        legend.position = "none", legend.position.inside = c(0.9,0.9), )
-
-matches_plot2 <- 
-  ggplot(match_df, aes(x = dataset_matchtype, y = Freq, fill = Var1)) + geom_col() +
-  facet_wrap(~match_type, ncol = 1, scales = "free") +
-  scale_fill_manual(name = "Match with current \ndataset", values = c("#070E8A","#2E9DFF"), labels = c("False", "True")) +
-  labs(x = "", y = "Number of species") + theme_classic() + 
-  scale_x_discrete(labels = c("Baker_Approx" = "Approximate \n match", "Baker_Exact" = "Exact \n match", "Bennie_Approx" = "Approximate \n match", "Bennie_Exact" = "Exact \n match","Maor_Approx" = "Approximate \n match", "Maor_Exact" = "Exact \n match")) +
-  theme(strip.placement = "outside", strip.background = element_blank(),panel.spacing.x = unit(0, "pt"),
-        legend.position = "bottom", legend.position.inside = c(0.9,0.9), axis.text.x = element_blank())
-
-
-
-# Section: Proportion plots -----------------------------------------------
-
-artio_df <- read.csv(here("Sleepy_artiodactyla_full.csv")) #235 species with data
-
-#Maor dataset
-Maor_diel <- read.csv(here("Maor_mam_data.csv")) 
-Maor_diel %>% filter(Order %in% c("Cetacea")) 
-cetacean_list <- Maor_diel %>% filter(Order %in% c("Cetacea")) %>% pull(tips)
-Maor_diel <- Maor_diel %>% filter(Order %in% c("Artiodactyla", "Cetacea")) %>% select("tips", "Maor_activity_pattern") #172 species
-
-Maor_diel[!Maor_diel$tips %in% artio_df$tips, ]
-
-#Bennie dataset
-Bennie_diel <- read.csv(here("Bennie_mam_data.csv")) 
-Bennie_diel <- Bennie_diel %>% filter(Order == "Artiodactyla") %>% select("tips", "Bennie_activity_pattern") #235 sps  
-
-Bennie_diel[!Bennie_diel$tips %in% artio_df$tips, ]
-
-#Baker dataset
-Baker_df <- read.csv(here("Baker_mam_data.csv"))
-Baker_df %>% filter(Order %in% c("Cetacea")) #same species as in Maor
-Baker_df <- filter(Baker_df, Order %in% c("Artiodactyla", "Cetacea")) %>% select("tips", "Activity_pattern") #209
-
-Baker_df[!Baker_df$tips %in% artio_df$tips, ]
-
-#filter my dataset
-artio_df <- artio_df %>% filter(Parvorder == "non-cetacean" | tips %in% cetacean_list) %>% select(tips, Diel_Pattern) 
-
-mammals_df <- merge(Maor_diel, Bennie_diel, by = "tips", all = TRUE) #256 species
-mammals_df <- merge(mammals_df, Baker_df, by = "tips", all = TRUE) #260 species
-#merge my artiodactyla data with the mammal data
-mammals_df <- merge(mammals_df, artio_df, by = "tips", all.x = TRUE) #265 species
-
-colnames(mammals_df) <- c("tips", "Maor_diel", "Bennie_diel", "Baker_diel", "six_state")
-
-#classify partially cathemeral or crepuscular species as cathemeral or crepuscular
-unique(mammals_df$Maor_diel)
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/nocturnal/crepuscular", replacement = "cathemeral/crepuscular")
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/diurnal/nocturnal/crepuscular", replacement = "cathemeral/crepuscular")
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/diurnal/crepuscular/ultradian", replacement = "cathemeral/crepuscular")
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "diurnal/nocturnal/crepuscular", replacement = "cathemeral/crepuscular")
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/diurnal/crepuscular", replacement = "cathemeral/crepuscular")
-
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "diurnal/nocturnal", replacement = "cathemeral")
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/diurnal", replacement = "cathemeral")
-mammals_df$Maor_diel <- str_replace(mammals_df$Maor_diel, pattern = "cathemeral/nocturnal", replacement = "cathemeral")
-
-#call cathemeral/crepuscular species crepuscular
-mammals_df <- data.frame(lapply(mammals_df, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
-
-proportion_plot <-
-  mammals_df %>% 
-  pivot_longer(!tips, names_to = "dataset", values_to = "activity_pattern") %>%
-  filter(!is.na(activity_pattern)) %>%
-  ggplot(., aes(x = factor(dataset, levels = c("Baker_diel", "Bennie_diel", "Maor_diel",  "max_crep")), fill = activity_pattern)) + 
-  geom_bar(position = "fill", alpha = 0.75) +
-  scale_fill_manual(name = "Temporal activity pattern", values= c("#dd8ae7","#EECBAD", "#FC8D62","gold", "#66C2A5", "palegreen"),
-                    labels = c("Cathemeral", "Crepuscular", "Diurnal", "Diurnal and crepusuclar", "Nocturnal", "Nocturnal and crepuscular")) +
-  labs(y = "Proportion of total species", x = "Clade") + 
-  #scale_x_discrete(labels = c("Bennie_diel" = "Bennie et al \n (n = 237)", "max_crep" = "Current \n dataset \n (n = 232)", "Maor_diel" = "Maor et al \n (n =173)", "Baker_diel" = "Baker et al \n (n =210)")) +
-  theme_classic() + theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_blank(), axis.text.y = element_text(size = 9), panel.grid = element_blank())
-proportion_plot
-
-
-# Section: save out combined plots----------------------------------------------
-
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots0.pdf", width = 8.6, height = 3.5)
-(proportion_plot + theme(legend.position = "right")) + (matches_plot2 + theme(legend.position = "right")) +
-  guide_area() +
-  plot_layout(guides = 'collect', widths = c(0.9, 0.7, 0.4))
-dev.off()
-
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots1.pdf", width = 8.8, height = 4)
-Baker_sankey + Bennie_sankey + Maor_sankey2
-dev.off()
-
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots2.pdf", width = 8.5, height = 3)
-confusion_plot_baker + confusion_plot_bennie + confusion_plot_maor + plot_layout(widths = c(0.7, 1, 1.3))
-dev.off()
-
-# Section 11: Number of sources in each category-------------------------------------------------------
+# Section 9: Number of sources in each category-------------------------------------------------------
 test_diel_long <- read.csv(here("cetacean_confidence_long_final.csv"))
 sources_df <- as.data.frame(table(test_diel_long$column)) %>% mutate(Clade = "Cetacea")
 
@@ -1030,8 +673,8 @@ sources_df <- sources_df %>% mutate(Freq = case_when(Freq > 6 ~ 7,
 
 total_sources <- sources_df %>% group_by(Clade, Freq) %>% summarize(Freq = Freq, total_species = n()) %>%
   ggplot(., aes(x = Freq, y = total_species, fill = Clade)) +
-    geom_col(position = position_dodge()) +
-    #geom_histogram(position = position_dodge(width = 0.9), binwidth = 1, bins = 7) +
+  geom_col(position = position_dodge()) +
+  #geom_histogram(position = position_dodge(width = 0.9), binwidth = 1, bins = 7) +
   labs(y = "Number of species", x = "Number of sources per species") + theme_classic() + scale_fill_manual(values = c("#070E8A","#2E9DFF")) +
   scale_x_continuous(breaks = 1:7, labels = c(1,2,3,4,5,6, "7 or more")) +
   theme(panel.grid = element_blank(), legend.position = "inside", legend.position.inside = c(0.85, 0.8))
@@ -1041,7 +684,7 @@ pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/source_count_ba
 number_sources + total_sources 
 dev.off()
 
-# Section 12: Cetacean and ruminant df with sources -------------------------------------
+# Section 10: Cetacean and ruminant df with sources -------------------------------------
 
 #cetaceans
 url <- 'https://docs.google.com/spreadsheets/d/1eG_WIbhDzSv_g-PY90qpTMteESgPZZZt772g13v-H1o/edit?usp=sharing'
@@ -1106,7 +749,7 @@ artio_full <- artio_full %>% mutate(References = gsub("c(", "", References, fixe
 write.csv(artio_full, "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/artiodactyla_with_sources.csv", row.names = FALSE)
 write.csv(artio_sources, "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/artiodactyla_references.csv", row.names = FALSE)
 
-# Section 13: Save out combined plots -------------------------------------------------
+# Section 11: Save out combined plots -------------------------------------------------
 pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_category_confusion_plots.pdf", width = 8.5, height = 3)
 plot_countfreq_cet + plot_countfreq_rum
 dev.off()
