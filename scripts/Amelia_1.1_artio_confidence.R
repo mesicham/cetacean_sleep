@@ -570,18 +570,6 @@ dev.off()
 
 # Section 7: Sankey pipeline flowchart ------------------------------------------
 
-# #ruminants only
-# df <- data.frame(
-#   step_8 = c(rep("A. Multiple category D \n source majority?", 206)),
-#   step_7 = c(rep("B. Return category D \n (n = 10)", 10), rep("C. Category D + E \n source majority?", 196)),
-#   step_6 = c(rep(NA, 10), rep("D. Return category D + E \n (n = 1)", 1), rep("E. Category C + D + E \n source majority?", 195)),
-#   step_5 = c(rep(NA, 11), rep("F. Return category C + D + E \n (n = 28)", 28), rep("G. Single category \n D source?", 167)),
-#   step_4 = c(rep(NA, 39), rep("H. Return category D source \n (n = 36)", 36), rep("I. Multiple category E \n source majority?", 131)),
-#   step_3 = c(rep(NA, 75), rep("J. Return category E (n = 3)",3), rep("K. Multiple category C \n source majority?", 128)),
-#   step_2 = c(rep(NA, 78), rep("L. Return category C (n = 64)", 64), rep("M. Single category \n C source?", 64)),
-#   step_1 = c(rep(NA, 142), rep("N. Return category C \n source (n = 6)", 6), rep("O. Category A + C + D + E \n source majority?", 58)),
-#   step_0 = c(rep(NA, 148), rep("P. Return category A + C + D + E \n (n = 51)",51), rep("Q. Else return \n cathemeral (n = 7)", 7)))
-
 #non-cetacean artiodactyls
 df <- data.frame(
   step_8 = c(rep("A. Multiple category D \n source majority?", 235)),
@@ -767,11 +755,6 @@ pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/rum_sankey_plot
 (sankey_rum + coord_flip())
 dev.off()
 
-
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots.pdf", width = 8.5, height = 5, bg = "transparent")
-(sankey_cet + coord_flip()) + plot_spacer() + (sankey_rum + coord_flip()) + plot_layout(width = c(5, 0.2, 5))
-#grid.arrange(sankey_cet + coord_flip(), plot_spacer(), sankey_rum + coord_flip(), nrow = 1)
-dev.off()
 
 pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_crep_plots.pdf", width = 8.5, height = 3.75, bg = "transparent")
 (sankey_crep_cet + coord_flip()) + plot_spacer() + (sankey_crep_cet + coord_flip()) + plot_layout(width = c(5, 0.2, 5))

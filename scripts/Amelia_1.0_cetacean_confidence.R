@@ -524,10 +524,6 @@ diel_full_long <- diel_full_long[!is.na(diel_full_long$value),]
 #check which diel patterns we are comparing
 unique(diel_full_long$value)
 
-#check to see if there is a difference in concordance for mysticeti vs odontoceti
-#diel_full_long <- filter(diel_full_long, Parvorder == "Odontoceti")
-#diel_full_long <- filter(diel_full_long, Parvorder == "Mysticeti")
-
 #get a list of all the species with more than one source (should be most of them)
 species_list <- table(diel_full_long$Species_name)
 #should be 72 species with all cetaceans w multiple sources, 67 with only cetaceans in tree with mulitple sources
@@ -591,11 +587,93 @@ table2$count <- table
 
 #want to make a plot that has both the frequency and the counts
 table2$freq_count <- paste0((round(table2$Freq, 2) * 100), "%", "\n", "(n=", table2$count, ")")
-#plot_countfreq_cet_myst <- 
-#plot_countfreq_cet_odont <- 
 plot_countfreq_cet <- 
-  table2[c(1:4, 5:7, 10:12, 16:17, 21), ] %>% #for odontocetes
-  #table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>% 
+  table2[c(1:5, 7:10, 13:15, 19:20, 25), ]  %>% 
+  ggplot(., aes(x = Comp1, y = Comp2, fill = Freq, label = freq_count)) +
+  geom_tile() + geom_text(size = 3) + scale_fill_viridis(begin = 0.2, end = 1, limits = c(1,0)) + 
+  theme_minimal() + ylab("Primary source category") + xlab("Secondary source category") +
+  scale_x_discrete(labels = c("A", "B", "C", "D", "E")) +
+  scale_y_discrete(labels = c("A", "B", "C", "D", "E")) +
+  theme(legend.position = "none")
+plot_countfreq_cet
+
+#divided by suborder
+#check to see if there is a difference in concordance for mysticeti vs odontoceti
+diel_full_long_odont <- filter(diel_full_long, Parvorder == "Odontoceti")
+diel_full_long_myst <- filter(diel_full_long, Parvorder == "Mysticeti")
+
+#get a list of all the species with more than one source (should be most of them)
+species_list1 <- table(diel_full_long_odont$Species_name)
+species_list2 <- table(diel_full_long_myst$Species_name)
+#should be 72 species with all cetaceans w multiple sources, 67 with only cetaceans in tree with mulitple sources
+species_list1 <- names(species_list1[species_list1 > 1])
+species_list2 <- names(species_list2[species_list2 > 1])
+
+output1 <- lapply(species_list1, function(species) {
+  
+  #filter for one species at a time
+  df <- diel_full_long_odont[diel_full_long_odont$Species_name == species,]
+  #rename the column names to be unique for every entry for this species (ie for multiple column 2 entries column 2.1, 2.2 etc)
+  df$column <- make.unique(df$column)
+  
+  #converts the dataframe so it compares every entry with each other (ie for A,B,C A-A, A-B, A-C, B-A, B-B, B-C, etc)
+  df_lists_comb <- expand(df, nesting(var = column, vector = value), nesting(var2 = column, vector2 = value), .name_repair = "universal")
+  
+  df_lists_comb <- df_lists_comb %>% filter(var != var2) %>% arrange(var, var2) %>% mutate(vars = paste0(var, ".", var2)) %>% select(contains("var"), everything())
+  
+  #evaluates the activity patterns for each of these sources and returns if they agree or not (TRUE or FALSE)
+  comparisons <- df_lists_comb %>% group_by(vars) %>% mutate(comp = compTwo(comp1 = vector, comp2 = vector2))
+  #manipulate the strings for both variable names to revert them back to the original name (back to column 2 from col 2.1)
+  comparisons$var <- str_sub(comparisons$var, start = 1, end = 5)
+  comparisons$var2 <- str_sub(comparisons$var2, start = 1, end = 5)
+  
+  #create a column returning the comparison being made (ie col2-col2, col1-col2, etc)
+  comparisons$var_final <- paste(comparisons$var, comparisons$var2, sep = "_")
+  
+  #return just the comparison result column (TRUE or FALSE match) and the comparison being made (ie col1 vs col1)
+  return(comparisons[,c("comp","var_final")])
+})
+output2 <- lapply(species_list2, function(species) {
+  
+  #filter for one species at a time
+  df <- diel_full_long_myst[diel_full_long_myst$Species_name == species,]
+  #rename the column names to be unique for every entry for this species (ie for multiple column 2 entries column 2.1, 2.2 etc)
+  df$column <- make.unique(df$column)
+  
+  #converts the dataframe so it compares every entry with each other (ie for A,B,C A-A, A-B, A-C, B-A, B-B, B-C, etc)
+  df_lists_comb <- expand(df, nesting(var = column, vector = value), nesting(var2 = column, vector2 = value), .name_repair = "universal")
+  
+  df_lists_comb <- df_lists_comb %>% filter(var != var2) %>% arrange(var, var2) %>% mutate(vars = paste0(var, ".", var2)) %>% select(contains("var"), everything())
+  
+  #evaluates the activity patterns for each of these sources and returns if they agree or not (TRUE or FALSE)
+  comparisons <- df_lists_comb %>% group_by(vars) %>% mutate(comp = compTwo(comp1 = vector, comp2 = vector2))
+  #manipulate the strings for both variable names to revert them back to the original name (back to column 2 from col 2.1)
+  comparisons$var <- str_sub(comparisons$var, start = 1, end = 5)
+  comparisons$var2 <- str_sub(comparisons$var2, start = 1, end = 5)
+  
+  #create a column returning the comparison being made (ie col2-col2, col1-col2, etc)
+  comparisons$var_final <- paste(comparisons$var, comparisons$var2, sep = "_")
+  
+  #return just the comparison result column (TRUE or FALSE match) and the comparison being made (ie col1 vs col1)
+  return(comparisons[,c("comp","var_final")])
+})
+
+#combine this list of results 
+output1 <- Reduce(rbind, output1)
+output2 <- Reduce(rbind, output2)
+
+table <- table(output1$var_final)
+# prop.table(table, margin = 1)
+table2 <- as.data.frame(prop.table(table(output1$var_final, output1$comp), margin = 1))
+table2$Comp1 <- sapply(str_split(table2$Var1, "_"), `[`, 1)
+table2$Comp2 <- sapply(str_split(table2$Var1, "_"), `[`, 2)
+table2 <- table2[table2$Var2 == TRUE,]
+table2$count <- table
+#want to make a plot that has both the frequency and the counts
+table2$freq_count <- paste0((round(table2$Freq, 2) * 100), "%", "\n", "(n=", table2$count, ")")
+
+plot_countfreq_cet_odont <- 
+  table2[c(1:5, 7:10, 13:15, 19:20, 25), ]%>% #for odontocetes
   ggplot(., aes(x = Comp1, y = Comp2, fill = Freq, label = freq_count)) +
   geom_tile() + geom_text(size = 3) + scale_fill_viridis(begin = 0.2, end = 1, limits = c(1,0)) + 
   theme_minimal() + ylab("Primary source category") + xlab("Secondary source category") +
@@ -603,9 +681,28 @@ plot_countfreq_cet <-
   scale_y_discrete(labels = c("A", "B", "C", "D", "E")) +
   theme(legend.position = "none")
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/parvorder_category_confusion_plots.pdf", width = 8.5, height = 3)
-# plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
-# dev.off()
+table <- table(output2$var_final)
+# prop.table(table, margin = 1)
+table2 <- as.data.frame(prop.table(table(output2$var_final, output2$comp), margin = 1))
+table2$Comp1 <- sapply(str_split(table2$Var1, "_"), `[`, 1)
+table2$Comp2 <- sapply(str_split(table2$Var1, "_"), `[`, 2)
+table2 <- table2[table2$Var2 == TRUE,]
+table2$count <- table
+#want to make a plot that has both the frequency and the counts
+table2$freq_count <- paste0((round(table2$Freq, 2) * 100), "%", "\n", "(n=", table2$count, ")")
+
+plot_countfreq_cet_myst <- 
+    table2[c(1:4, 5:7, 10:12, 16:17, 21), ] %>% 
+    ggplot(., aes(x = Comp1, y = Comp2, fill = Freq, label = freq_count)) +
+    geom_tile() + geom_text(size = 3) + scale_fill_viridis(begin = 0.2, end = 1, limits = c(1,0)) + 
+    theme_minimal() + ylab("Primary source category") + xlab("Secondary source category") +
+    scale_x_discrete(labels = c("A", "B", "C", "D", "E")) +
+    scale_y_discrete(labels = c("A", "B", "C", "D", "E")) +
+    theme(legend.position = "none")
+
+pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/parvorder_category_confusion_plots.pdf", width = 8.5, height = 3)
+plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
+dev.off()
 
 # Section 5: Concordance sankey -------------------------------------------
 
