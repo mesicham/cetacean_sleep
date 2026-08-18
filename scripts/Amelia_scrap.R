@@ -1207,7 +1207,7 @@ test
 dev.off()
 
 
-# Section: old crepuscularity pipeline ------------------------------------
+# Section: old crepuscularity pipeline sankey ------------------------------------
 
 df <- data.frame(
   step_5 = c(rep("A. Total species (n = 84) ", 150)),
@@ -1858,3 +1858,146 @@ test[is.na(test)] <- 0
 
 knitr::kable(test, format = "html", digits = 3, caption = "Table 1") %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("table_final.html")
 webshot("table_final.html", file = "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Diel_pattern_chart.pdf")
+
+# Section 13: eye mass vs body mass ---------------------------------------
+eye_mass <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Burton_2006.xlsx")
+
+eye_mass <- separate(eye_mass, col = SpeciesBodymassBrainmassEyemass, into = c("Genus", "Species", "Body_mass_g", "Brain_mass_g", "Eye_mass_g"), sep = " ")
+eye_mass <- eye_mass %>% mutate(Eye_mass_g = as.numeric(Eye_mass_g), 
+                                Body_mass_g = as.numeric(Body_mass_g)* 1000, 
+                                Brain_mass_g = as.numeric(Brain_mass_g), 
+                                relative_eye_mass = Eye_mass_g/Body_mass_g)
+
+eye_mass$tips <- paste(eye_mass$Genus, eye_mass$Species, sep = "_")
+
+#fix species names
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Megaptera_nodosa", replacement = "Megaptera_novaeangliae")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Phocaena_phocaena", replacement = "Phocoena_phocoena")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Cervus_axis", replacement = "Axis_axis")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Gazella_thomsonii", replacement = "Eudorcas_thomsonii")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Rangifer_arcticus", replacement = "Rangifer_tarandus")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Cercopithecus_aethiops", replacement = "Chlorocebus_aethiops")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Sciurus_hudsonicus", replacement = "Tamiasciurus_hudsonicus")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Vulpes_fulvus", replacement = "Vulpes_vulpes")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Thos_mesomelas", replacement = "Canis_mesomelas")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_leo", replacement = "Panthera_leo")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_oregonensis", replacement = "Puma_concolor")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Claviglis_saturatus", replacement = "Graphiurus_murinus") #maybe
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_capensis", replacement = "Leptailurus_serval")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_onca", replacement = "Panthera_onca")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_pardus", replacement = "Panthera_pardus")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Mustela_articus", replacement = "Mustela_erminea") #maybe
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Pecari_angulatus", replacement = "Dicotyles_tajacu")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Tapirella_bairdii", replacement = "Tapirus_bairdii")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Thalarctos_maritimus", replacement = "Ursus_maritimus")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Macaca_rhesus", replacement = "Macaca_mulatta")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Rhinocerus_bicornis", replacement = "Diceros_bicornis")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Equus_caballus", replacement = "Equus_ferus")
+eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Citellus_parryii", replacement = "Spermophilus_citellus")
+
+#compare eye size across orders
+ggplot(eye_mass, aes(x = Order, y = log(relative_eye_mass), colour = Body_mass_g)) +geom_boxplot() + geom_jitter()
+
+#compare to activity patterns
+artio_df <- read.csv(here("Sleepy_artiodactyla_full.csv"))
+artio_df <- artio_df[artio_df$tips %in% eye_mass$tips, c("tips", "max_crep")]
+#16 of 84 species in artio database
+
+mammals_df <- read.csv(here("Bennie_mam_data.csv"))
+mammals_df <- mammals_df[mammals_df$tips %in% eye_mass$tips, c("tips", "max_crep")]
+#only 41 of 84 species have activity pattern data from Bennie et al
+#remove artios that I have data for (use my data)
+mammals_df <- mammals_df[!mammals_df$tips %in% artio_df$tips, ]
+#removes 10 artio sps
+
+mammals_df <- rbind(mammals_df, artio_df)
+
+eye_mass <- merge(eye_mass, mammals_df, all = TRUE)
+eye_mass[eye_mass$tips == "Homo_sapiens", c("max_crep")] <- "diurnal"
+eye_mass[eye_mass$tips == "Peromyscus_sp.", c("max_crep")] <- "nocturnal" #the entire genus is nocturnal
+
+#optional add in missing species, most are domestic 
+eye_mass[eye_mass$tips == "Felis_domesticus", c("max_crep")] <- "crepuscular" #https://doi.org/10.1007/s10530-017-1534-x
+eye_mass[eye_mass$tips == "Canis_familiaris", c("max_crep")] <- "crepuscular" #https://doi.org/10.1016/j.applanim.2021.105449
+eye_mass[eye_mass$tips == "Bos_taurus", c("max_crep")] <- "crepuscular" #https://doi.org/10.1371/journal.pone.0313086
+eye_mass[eye_mass$tips == "Capra_hircus", c("max_crep")] <- "crepuscular" #https://doi.org/10.1139/z03-055
+
+eye_mass <- eye_mass[!is.na(eye_mass$max_crep), ]
+
+eye_mass %>% filter(max_crep %in% c("diurnal", "nocturnal")) %>% ggplot(., aes(x = log(Body_mass_g), y = log(Eye_mass_g))) + geom_point(aes(colour = max_crep)) +
+  geom_smooth(method="lm", na.rm=T, se=F, formula=y~x, aes(color=max_crep)) 
+
+ggplot(eye_mass, aes(x = log(Body_mass_g), y = log(Eye_mass_g))) + geom_point(aes(colour = max_crep)) +
+  geom_smooth(method="lm", na.rm=T, se=F, formula=y~x, aes(color=max_crep)) 
+
+ggplot(eye_mass, aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(outlier.shape = NA) + 
+  geom_point(aes(colour = tips), size = 2) +
+  stat_compare_means(method = "anova") # + facet_wrap(~max_crep)
+
+eye_mass%>% filter(Order %in% c("Ungulates (Artiodactyla)", "Cetacea"), max_crep %in% c("diurnal", "nocturnal", "crepusuclar", "cathemeral")) %>%
+  ggplot(., aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(outlier.shape = NA) + geom_jitter(aes(colour = Order)) #+ facet_wrap(~Order)
+
+#pinnipeds have no activity pattern data so we can remove them 
+eye_mass%>% filter(max_crep %in% c("diurnal", "nocturnal", "crepuscular", "cathemeral")) %>%
+  ggplot(., aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(aes(fill = max_crep), outlier.shape = NA) + geom_point(aes(colour = Order), size =2) +
+  stat_compare_means(method = "anova") #+facet_wrap(~Order)
+
+eye_mass%>% filter(Order %in% c("Ungulates (Artiodactyla)", "Cetacea"), max_crep %in% c("diurnal", "nocturnal", "crepusuclar", "cathemeral")) %>%
+  ggplot(., aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(outlier.shape = NA) + geom_point(aes(colour = tips)) #+ facet_wrap(~Order)
+
+ggplot(eye_mass, aes(x = max_crep, y = log(Eye_mass_g))) +geom_boxplot(outlier.shape = NA, aes(fill = max_crep)) + 
+  geom_point(aes(colour = Order), size = 2) +
+  stat_compare_means(method = "anova") # + facet_wrap(~max_crep)
+
+
+
+# Section: old crepuscularity pipeline ------------------------------------
+
+#if category 3 greater than 50%, category 4 higher than 0% and if category 2 higher than 75% then call this source crepuscular
+#if majority of evidence categories call it crepuscular then designate it crepuscular
+#category 5 has no crepuscular calls and category 1 has only one, so don't use these to make calls
+
+tabulateCrep = function(x){
+  df <- aggregate(x$crepuscular, by = list(Category = x$column), FUN = sum)
+  #confidence level 1 and 5 don't have any information on crepuscularity so remove them, they will always be zero
+  df <- df[df$Category %in% c("Conf2", "Conf3", "Conf4"), ]
+  df2 <- aggregate(x$total, by = list(Category = x$column), FUN = sum)
+  
+  #if species only has level 1 and/or 5 data then total evidence will always be FALSE (we can't determine crepuscularity)
+  if(all(!df2$Category %in% c("Conf2", "Conf3", "Conf4")) == TRUE){
+    total_evidence <- "no sources"
+    return(total_evidence)
+  }
+  
+  df2 <- df2[df2$Category %in% c("Conf2", "Conf3", "Conf4"), ]
+  df2 <- merge(df, df2, by = "Category")
+  df2$percentage <- round((df2$x.x/df2$x.y) * 100, digits = 1)
+  #define what percentage of each category we want to call a species crepuscular,
+  df3 <- data.frame(Category = c("Conf2", "Conf3", "Conf4"), cutoff = c(50, 50, 20))
+  df2 <- merge(df2, df3, by = "Category")  #species can have Conf2, Conf3 and/or Conf4 evidence, when merged any missing categories will be dropped
+  df2$crep_evidence <- df2$percentage >= df2$cutoff
+  df2[df2$crep_evidence == TRUE, "crep_evidence"] <- "crepuscular"
+  df2[df2$crep_evidence == FALSE, "crep_evidence"] <- "non"
+  unique_percents <- unique(df2$crep_evidence)
+  #check if there's a tie, since we only use level 2,3 and 4, a tie will only occur when using two evidence levels 
+  if(nrow(df2) == 2){
+    if("crepuscular" %in% df2$crep_evidence & "non" %in% df2$crep_evidence){
+      #to break ties could look at which has more sources (to avoid making calls off one source)
+      #total_evidence <- df2[which.max(df2$x.y), "crep_evidence"]
+      #instead could also break ties by looking at the higher confidence level (this will always be the second row but use which to be safe)
+      total_evidence <- df2[which(df2$Category == max(df2$Category)), "crep_evidence"]
+    } else{
+      total_evidence <- unique_percents[which.max(tabulate(match(df2$crep_evidence, unique_percents)))]
+    }
+  } else {total_evidence <- unique_percents[which.max(tabulate(match(df2$crep_evidence, unique_percents)))]}
+  #additional screen: if there is level 4 evidence then evaluate to true 
+  if(nrow(filter(df2, Category == "Conf4"))== 1){
+    if(df2[df2$Category == "Conf4", "crep_evidence"] == "crepuscular"){
+      total_evidence <- "crepuscular"
+    }
+  } 
+  return(total_evidence)
+}
+
+crep_df <- diel_long%>% group_by(Species_name) %>% do(tabulated_crep = tabulateCrep(.)) %>% unnest()
+

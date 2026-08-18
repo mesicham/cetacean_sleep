@@ -22,7 +22,7 @@ get_rank <- function(tax_info, rank_name) {
   if (length(values) == 0) return(NA_character_) else return(values[1])
 }
 
-#split it up because it takes so long lol
+#split it up because it takes so long
 df1 <- resolved_names[1:1000,] %>% rowwise() %>% mutate(
   tax_info = list(taxonomy_taxon_info(ott_id, include_lineage = TRUE)),
   order = get_rank(tax_info, "order"),
@@ -207,7 +207,7 @@ write.csv(maor_mam_data, here("Maor_mam_data.csv"), row.names  = FALSE)
 # Section 3: Baker dataframe ----------------------------------------------
 
 #Baker et al dataset, a combination of primary data (200sps), the Bennie et al dataset and pantheria
-Baker_df <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Baker_2019.xlsx")
+Baker_df <- read_xlsx(here("Baker_diel_activity_data.xlsx"))
 Baker_df <- Baker_df[2: nrow(Baker_df),]
 colnames(Baker_df) <- c("tips", "Order", "Corneal_diameter", "Axial_length", "Activity_pattern", "Source")
 
@@ -259,7 +259,7 @@ Maor_sankey <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = n
 
 Maor_diel$exact_match <- Maor_diel$Maor_activity_pattern == Maor_diel$Diel_Pattern
 
-#function Max wrote for comparing entries, splits and compares each segment
+#function for comparing entries, splits and compares each segment
 compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
   
   if(any(is.na(c(comp1, comp2)))) {
@@ -340,7 +340,7 @@ Bennie_diel <- Bennie_diel[Bennie_diel$tips %in% artio_df$tips, ] #224 sps when 
 Bennie_diel <- merge(Bennie_diel, artio_df, by = "tips", all.x = TRUE) 
 Bennie_diel$exact_match <- Bennie_diel$Bennie_activity_pattern == Bennie_diel$Diel_Pattern
 
-#function Max wrote for comparing entries, splits and compares each segment
+#function for comparing entries, splits and compares each segment
 compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
   
   if(any(is.na(c(comp1, comp2)))) {
@@ -395,7 +395,6 @@ confusion_plot_bennie <-
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
 confusion_plot_bennie
 
-
 # Section 6: Baker et al comparison -----------------------------------------
 #my data
 artio_df <- read.csv(here("sleepy_artiodactyla_full.csv")) #235 species with data
@@ -409,7 +408,7 @@ Baker_df <- merge(Baker_df, artio_df, by = "tips", all.x = TRUE) #204 sps
 
 Baker_df$exact_match <- Baker_df$Activity_pattern == Baker_df$Diel_Pattern
 
-#function Max wrote for comparing entries, splits and compares each segment
+#function for comparing entries, splits and compares each segment
 compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
   
   if(any(is.na(c(comp1, comp2)))) {
@@ -450,7 +449,6 @@ Baker_sankey <-  Baker_df %>% make_long(Activity_pattern, Diel_Pattern) %>%
 
 Baker_sankey
 
-
 #concordance by activity pattern
 concordance <- as.data.frame(table(Baker_df$Activity_pattern, Baker_df$Diel_Pattern))
 colnames(concordance) <- c("actual", "predicted", "freq")
@@ -469,13 +467,6 @@ confusion_plot_baker
 
 # Section 7: Number of matches plot -----------------------------------------
 #plot number of matches
-table(Baker_df$approx_match)
-table(Baker_df$exact_match)
-table(Maor_diel$approx_match)
-table(Maor_diel$exact_match)
-table(Bennie_diel$approx_match)
-table(Bennie_diel$exact_match)
-
 match_df <-  rbind(data.frame(table(Baker_df$approx_match)), data.frame(table(Baker_df$exact_match)),
                    data.frame(table(Bennie_diel$approx_match)), data.frame(table(Bennie_diel$exact_match)),
                    data.frame(table(Maor_diel$approx_match)), data.frame(table(Maor_diel$exact_match)))
@@ -562,16 +553,16 @@ proportion_plot
 
 # Section 9: save out combined plots----------------------------------------------
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots0.pdf", width = 8.6, height = 3.5)
+pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_sankey_plots0.pdf", width = 8.6, height = 3.5)
 (proportion_plot + theme(legend.position = "right")) + (matches_plot + theme(legend.position = "right")) +
   guide_area() +
   plot_layout(guides = 'collect', widths = c(0.9, 0.7, 0.4))
 dev.off()
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots1.pdf", width = 8.8, height = 4)
+pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_sankey_plots1.pdf", width = 8.8, height = 4)
 Baker_sankey + Bennie_sankey + Maor_sankey2
 dev.off()
 
-pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/combined_sankey_plots2.pdf", width = 8.5, height = 3)
+pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_sankey_plots2.pdf", width = 8.5, height = 3)
 confusion_plot_baker + confusion_plot_bennie + confusion_plot_maor + plot_layout(widths = c(0.7, 1, 1.3))
 dev.off()

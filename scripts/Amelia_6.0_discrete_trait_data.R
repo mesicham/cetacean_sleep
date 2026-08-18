@@ -1,6 +1,6 @@
 # Section 1: Churchill et al dive data, mass, length---------------------------------------------
 #https://doi.org/10.1111/joa.13522 
-church_pt2 <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Churchill_Baltz_2021_pt2.xlsx")
+church_pt2 <- read_xlsx(here("cetacean_discrete_traits\\Churchill_Baltz_2021_pt2.xlsx"))
 colnames(church_pt2) <- c("Species", "Dive_depth", "Log_dive_depth", "Dive_duration", "Log_dive_duration", "Mass", "Log_mass", "Total_body_length", "Log_body_length", "Assymetry_index", "Peak_frequency", "Log_frequency")
 
 church_pt2$tips <- str_replace(church_pt2$Species, " ", "_")
@@ -23,10 +23,11 @@ church_pt2$tips <- str_replace(church_pt2$tips, pattern = "Sagmatias_obscurus", 
 church_pt2$tips <- str_replace(church_pt2$tips, pattern = "Zygorhiza_kochi", replacement = "Zygorhiza_kochii")
 church_pt2$tips <- str_replace(church_pt2$tips, pattern = "Mesoplodon_layardi", replacement = "Mesoplodon_layardii")
 
-write.csv(church_pt2, here("Churchill_dive_body_length.csv"), row.names = FALSE)
+write.csv(church_pt2, here("cetacean_discrete_traits\\Churchill_dive_body_length.csv"), row.names = FALSE)
+
 # Section 2: Churchill et al, cetacean orbit ratio ---------------------------------
 #https://doi.org/10.1111/joa.13522 
-church_pt1 <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Churchill_Baltz_2021_pt1.xlsx")
+church_pt1 <- read_xlsx(here("cetacean_discrete_traits\\Churchill_Baltz_2021_pt1.xlsx"))
 colnames(church_pt1) <- c("Species", "Family", "Specimen_number", "Left_orbit_length", "Right_orbit_length", "Bizygomatic_width", "Average_orbit_length", "Orbit_ratio")
 
 #only keep extant species
@@ -54,11 +55,11 @@ church_pt1 <- church_pt1 %>% group_by(tips) %>% mutate(Orbit_ratio = mean(Orbit_
 #remove duplicates
 church_pt1 <- church_pt1[!duplicated(church_pt1$tips), c("Orbit_ratio", "tips")]
 
-write.csv(church_pt1, here("cetacean_orbit_ratio.csv"), row.names = FALSE)
+write.csv(church_pt1, here("cetacean_discrete_traits\\cetacean_orbit_ratio.csv"), row.names = FALSE)
 
 # Section 3: Coombs et al habitat, diet, dentition, echo ------------------------------------------------------
 #https://discovery.ucl.ac.uk/id/eprint/10135933/7/Coombs_10135933_thesis_revised.pdf
-echo <- read_xlsx("C:/Users/ameli/OneDrive/Documents/R_projects/cetacean_discrete_traits/Coombs_et_al_2021.xlsx")
+echo <- read_xlsx(here("cetacean_discrete_traits\\Coombs_et_al_2021.xlsx"))
 echo$tips <- str_replace(echo$`Museum ID`, " ", "_")
 echo <- separate(echo, tips, into = c("tips", "museum_id"), sep = " ")
 
@@ -75,12 +76,12 @@ mam.tree <- readRDS(here("maxCladeCred_mammal_tree.rds"))
 echo[!echo$tips %in% mam.tree$tip.label,]
 echo$tips <- str_replace(echo$tips, pattern = "Kogia_simus", replacement = "Kogia_sima")
 
-write.csv(echo, here("cetacean_habitat_dentition_echo.csv"), row.names = FALSE)
+write.csv(echo, here("cetacean_discrete_traits\\cetacean_habitat_dentition_echo.csv"), row.names = FALSE)
 
 # Section 4: Travis Park et al, mass, divetype, diet, fm, habitat 2019 -----------------------------------------------
 #https://doi.org/10.1186/s12862-019-1525-x
 
-dive <- read.csv("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\resource.csv")
+dive <- read.csv(here("cetacean_discrete_traits\\Park_et_al_2019.csv"))
 dive$tips <- dive$Taxon
 
 #dive type (shallow (estimated max dive depth <100m), mid (estimated max dive depth ~500m), deep (estimated max dive depth ~1000m), very deep (estimated max dive depth>1000m))
@@ -103,12 +104,12 @@ dive$Feeding.behaviour <- str_to_title(dive$Feeding.behaviour)
 
 colnames(dive) <- c("tips", "Body.size", "Diet1", "Divetype", "Feeding.behaviour", "Habitat_1")
 
-write.csv(dive, here("cetacean_Park_dive.csv"), row.names = FALSE)
+write.csv(dive, here("cetacean_discrete_traits\\cetacean_Park_dive.csv"), row.names = FALSE)
 
 # Section 5: Manger et al mass, brain size, sociality, longevity, feeding strategy-------------------------------------------------
 #https://doi.org/10.1016/j.neuroscience.2013.07.041
 
-Manger <- read.csv("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Manger_2013_discrete_cet.csv")
+Manger <- read.csv(here("cetacean_discrete_traits\\Manger_2013_discrete_cet.csv"))
 #body mass, encephalization quotient, group size, social dynamics, longevity, feeding strategy
 #of these, body mass is probably the most relevant to activity patterns (ie are whales with large body size cathemeral)
 colnames(Manger) <- c("Genus_species", "Male_mass", "Female_mass", "Average_body_mass", "Brain_mass", "Encephalization_quotient", "Longevity_days", "Sexual_maturity_days", "Group_size", "Group_size_range", "Group_social_dynamics", "Feeding_strategy")
@@ -147,7 +148,7 @@ Manger <- Manger[, c("Average_body_mass", "Brain_mass", "Encephalization_quotien
 #drop row with Delphinus_capensis
 Manger <- Manger[-c(18), ]
 
-write.csv(Manger, here("cetacean_manger_et_al.csv"), row.names = FALSE)
+write.csv(Manger, here("cetacean_discrete_traits\\cetacean_manger_et_al.csv"), row.names = FALSE)
 
 # Section 7: IUCN cetacean latitude ----------------------------------------------
 
@@ -184,7 +185,7 @@ write.csv(lat.df, here("cetacean_latitude_df.csv"), row.names = FALSE)
 
 # Section 8: Churchill qualitative variables ------------------------------
 
-church_qual <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Churchill_Baltz_2021_pt2_page_2.xlsx")
+church_qual <- read_xlsx(here("cetacean_discrete_traits\\Churchill_Baltz_2021_pt2_page_2.xlsx"))
 church_qual <- as.data.frame(church_qual)
 church_qual$tips <- str_replace(church_qual$Species, " ", "_")
 
@@ -204,25 +205,11 @@ church_qual$tips <- str_replace(church_qual$tips, pattern = "Mesoplodon_layardi"
 church_qual <- church_qual[, c("Habitat", "Prey-capture", "tips")]
 colnames(church_qual) <- c("Habitat_2", "Prey_capture", "tips")
 
-write.csv(church_qual, here("churchill_habitat_prey_capture.csv"), row.names = FALSE)
-
-
-# Section 9: Churchill et al full dataframe  -----------------------------------
-#to keep all data from one source can use just the churchill et al dataset 
-dive_depth <- read.csv(here("Churchill_dive_body_length.csv")) #28 species
-orbit_ratio <- read.csv(here("cetacean_orbit_ratio.csv")) #70 species
-habitat <- read.csv(here("churchill_habitat_prey_capture.csv")) #70 species
-
-trait.data <- merge(dive_depth, orbit_ratio, by = "tips", all = TRUE)
-trait.data <- merge(trait.data, habitat, all = TRUE)
-
-colnames(trait.data) <- c("tips", "Body_mass", "Body_length", "Dive_depth", "Orbit_ratio", "Habitat", "Prey_capture")
-
-write.csv(trait.data, here("churchill_cetacean_dataset.csv"), row.names = FALSE)
+write.csv(church_qual, here("cetacean_discrete_traits\\churchill_habitat_prey_capture.csv"), row.names = FALSE)
 
 # Section 10: Chen et al cetacean data -------------------------------------
 #https://doi.org/10.1111/gcb.16385
-Chen <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Chen_2022.xlsx")
+Chen <- read_xlsx(here("cetacean_discrete_traits\\Chen_2022.xlsx"))
 
 #Contains active region (AR: 1 = inland water, 2 = coastal waters, 3 = oceanic waters), range size in km2(RS)
 #maximum school size (MSS), maximum dive depth in m (MDD), body weight in tonnes (MBW), maximum reproductive cycle (MRC).
@@ -245,14 +232,13 @@ Chen$IUCN[which(Chen$IUCN == 4)] <- "critically_endangered"
 Chen$tips <- str_replace(Chen$Species, pattern = " ", replacement = "_")
 
 colnames(Chen) <- c("Species_name", "IUCN","Active_range", "max_dive_depth", "body_weight", "tips")
-Chen <- Chen[, -1]
 
-#remove Max dive depth since it is unreliable when compared to other sources
+#remove Max dive depth since it is unreliable when compared to other sources, may correspond to habitat depth instead
 Chen <- Chen %>% select(IUCN, Active_range, body_weight, tips)
 
-write.csv(Chen, here("Chen_cetacean_traits.csv"), row.names = FALSE)
+write.csv(Chen, here("cetacean_discrete_traits\\Chen_cetacean_traits.csv"), row.names = FALSE)
 
-# Section 11: Primary literature + Churchill + Laeta + NOT Chen dive depth data --------------------------
+# Section 11: Primary literature + Churchill + Laeta dive depth data --------------------------
 
 #read in the additional dive data I collected
 url <- 'https://docs.google.com/spreadsheets/d/1_0ZS_tbddOCckkcKn9H5HpVRDZty4jhkUU20Nc0YYQY/edit?usp=sharing'
@@ -266,12 +252,12 @@ dive_full[is.na(dive_full)] <- 0
 dive_full$Max_dive_depth_m <- pmax(dive_full$Max_dive_depth_m, dive_full$Alt_Max_1, dive_full$Alt_Max_2, dive_full$Alt_Max_3, dive_full$Alt_Max_4)
 dive_full$tips <- str_replace(dive_full$Species, " ", "_")
 
-church_pt2 <- read.csv(here("Churchill_dive_body_length.csv"))
+church_pt2 <- read.csv(here("cetacean_discrete_traits\\Churchill_dive_body_length.csv"))
 dive.data <- merge(church_pt2[, c("tips", "Dive_depth")], dive_full[, c("Max_dive_depth_m", "tips")], all = TRUE, by = "tips")
 
 #more data from Laeta et al
 #https://doi.org/10.1093/biolinnean/blaa161
-Laeta_data <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Laeta_2020_dive_data.xlsx")
+Laeta_data <- read_xlsx("cetacean_discrete_traits\\Laeta_2020_dive_data.xlsx")
 Laeta_data$tips <- str_replace(Laeta_data$Species, " ", "_")
 
 #check for misspellings
@@ -285,8 +271,6 @@ Laeta_data$Dive_depth_Laeta <- as.integer(Laeta_data$Dive_depth_Laeta)
 
 dive.data <- merge(dive.data, Laeta_data, all = TRUE, by = "tips")
 
-#Dive data from Chen et al seems to overestimate dive depth significantly (1000s of m) so do not include
-
 #take the mean and the maximum
 dive.data[is.na(dive.data)] <- 0
 dive.data$Final_dive_depth <- pmax(dive.data$Dive_depth, dive.data$Max_dive_depth_m, dive.data$Dive_depth_Laeta)
@@ -295,17 +279,17 @@ dive.data <- dive.data %>% mutate(., Mean_dive_depth = rowMeans(select(., 2:5), 
 dive.data[dive.data == "NaN"] <- NA
 dive.data <- dive.data[, c("tips", "Final_dive_depth", "Mean_dive_depth")]
 dive.data <- filter(dive.data, !is.na(Final_dive_depth))
-write.csv(dive.data, here("cetacean_dive_depth.csv"), row.names = FALSE)
+write.csv(dive.data, here("cetacean_discrete_traits\\cetacean_dive_depth.csv"), row.names = FALSE)
 
 # Section 12: One cetacean dataframe to rule them all -------------------------------
-dive_depth <- read.csv(here("Churchill_dive_body_length.csv")) #28 species
-orbit_ratio <- read.csv(here("cetacean_orbit_ratio.csv")) #70 species
-echo <- read.csv(here("cetacean_habitat_dentition_echo.csv")) #84 species
-Manger <- read.csv(here("cetacean_manger_et_al.csv")) #74 species
-habitat <- read.csv(here("churchill_habitat_prey_capture.csv")) #70 species
-Park <- read.csv(here("cetacean_Park_dive.csv")) #48 species
-Chen <- read.csv(here("Chen_cetacean_traits.csv")) #80 species
-dive.data <- read.csv(here("cetacean_dive_depth.csv")) #62 species
+dive_depth <- read.csv(here("cetacean_discrete_traits\\Churchill_dive_body_length.csv")) #28 species
+orbit_ratio <- read.csv(here("cetacean_discrete_traits\\cetacean_orbit_ratio.csv")) #70 species
+echo <- read.csv(here("cetacean_discrete_traits\\cetacean_habitat_dentition_echo.csv")) #84 species
+Manger <- read.csv(here("cetacean_discrete_traits\\cetacean_manger_et_al.csv")) #74 species
+habitat <- read.csv(here("cetacean_discrete_traits\\churchill_habitat_prey_capture.csv")) #70 species
+Park <- read.csv(here("cetacean_discrete_traits\\cetacean_Park_dive.csv")) #48 species
+Chen <- read.csv(here("cetacean_discrete_traits\\Chen_cetacean_traits.csv")) #80 species
+dive.data <- read.csv(here("cetacean_discrete_traits\\cetacean_dive_depth.csv")) #62 species
   
 trait.data <- merge(dive_depth[, c("Dive_duration", "Mass", "Total_body_length", "tips")], orbit_ratio, by = "tips", all = TRUE)
 trait.data <- merge(trait.data, echo, all = TRUE, by = "tips")
@@ -460,99 +444,8 @@ trait.data[trait.data == ""] <- NA
 
 write.csv(trait.data, here("cetacean_ecomorphology_dataset.csv"), row.names = FALSE)
 
-# Section 13: eye mass vs body mass ---------------------------------------
-eye_mass <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Burton_2006.xlsx")
-
-eye_mass <- separate(eye_mass, col = SpeciesBodymassBrainmassEyemass, into = c("Genus", "Species", "Body_mass_g", "Brain_mass_g", "Eye_mass_g"), sep = " ")
-eye_mass <- eye_mass %>% mutate(Eye_mass_g = as.numeric(Eye_mass_g), 
-                                Body_mass_g = as.numeric(Body_mass_g)* 1000, 
-                                Brain_mass_g = as.numeric(Brain_mass_g), 
-                                relative_eye_mass = Eye_mass_g/Body_mass_g)
-
-eye_mass$tips <- paste(eye_mass$Genus, eye_mass$Species, sep = "_")
-
-#fix species names
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Megaptera_nodosa", replacement = "Megaptera_novaeangliae")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Phocaena_phocaena", replacement = "Phocoena_phocoena")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Cervus_axis", replacement = "Axis_axis")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Gazella_thomsonii", replacement = "Eudorcas_thomsonii")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Rangifer_arcticus", replacement = "Rangifer_tarandus")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Cercopithecus_aethiops", replacement = "Chlorocebus_aethiops")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Sciurus_hudsonicus", replacement = "Tamiasciurus_hudsonicus")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Vulpes_fulvus", replacement = "Vulpes_vulpes")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Thos_mesomelas", replacement = "Canis_mesomelas")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_leo", replacement = "Panthera_leo")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_oregonensis", replacement = "Puma_concolor")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Claviglis_saturatus", replacement = "Graphiurus_murinus") #maybe
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_capensis", replacement = "Leptailurus_serval")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_onca", replacement = "Panthera_onca")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Felis_pardus", replacement = "Panthera_pardus")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Mustela_articus", replacement = "Mustela_erminea") #maybe
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Pecari_angulatus", replacement = "Dicotyles_tajacu")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Tapirella_bairdii", replacement = "Tapirus_bairdii")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Thalarctos_maritimus", replacement = "Ursus_maritimus")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Macaca_rhesus", replacement = "Macaca_mulatta")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Rhinocerus_bicornis", replacement = "Diceros_bicornis")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Equus_caballus", replacement = "Equus_ferus")
-eye_mass$tips <- str_replace(eye_mass$tips, pattern = "Citellus_parryii", replacement = "Spermophilus_citellus")
-
-#compare eye size across orders
-ggplot(eye_mass, aes(x = Order, y = log(relative_eye_mass), colour = Body_mass_g)) +geom_boxplot() + geom_jitter()
-
-#compare to activity patterns
-artio_df <- read.csv(here("Sleepy_artiodactyla_full.csv"))
-artio_df <- artio_df[artio_df$tips %in% eye_mass$tips, c("tips", "max_crep")]
-#16 of 84 species in artio database
-
-mammals_df <- read.csv(here("Bennie_mam_data.csv"))
-mammals_df <- mammals_df[mammals_df$tips %in% eye_mass$tips, c("tips", "max_crep")]
-#only 41 of 84 species have activity pattern data from Bennie et al
-#remove artios that I have data for (use my data)
-mammals_df <- mammals_df[!mammals_df$tips %in% artio_df$tips, ]
-#removes 10 artio sps
-
-mammals_df <- rbind(mammals_df, artio_df)
-
-eye_mass <- merge(eye_mass, mammals_df, all = TRUE)
-eye_mass[eye_mass$tips == "Homo_sapiens", c("max_crep")] <- "diurnal"
-eye_mass[eye_mass$tips == "Peromyscus_sp.", c("max_crep")] <- "nocturnal" #the entire genus is nocturnal
-
-#optional add in missing species, most are domestic 
-eye_mass[eye_mass$tips == "Felis_domesticus", c("max_crep")] <- "crepuscular" #https://doi.org/10.1007/s10530-017-1534-x
-eye_mass[eye_mass$tips == "Canis_familiaris", c("max_crep")] <- "crepuscular" #https://doi.org/10.1016/j.applanim.2021.105449
-eye_mass[eye_mass$tips == "Bos_taurus", c("max_crep")] <- "crepuscular" #https://doi.org/10.1371/journal.pone.0313086
-eye_mass[eye_mass$tips == "Capra_hircus", c("max_crep")] <- "crepuscular" #https://doi.org/10.1139/z03-055
-
-eye_mass <- eye_mass[!is.na(eye_mass$max_crep), ]
-
-eye_mass %>% filter(max_crep %in% c("diurnal", "nocturnal")) %>% ggplot(., aes(x = log(Body_mass_g), y = log(Eye_mass_g))) + geom_point(aes(colour = max_crep)) +
-  geom_smooth(method="lm", na.rm=T, se=F, formula=y~x, aes(color=max_crep)) 
-
-ggplot(eye_mass, aes(x = log(Body_mass_g), y = log(Eye_mass_g))) + geom_point(aes(colour = max_crep)) +
-  geom_smooth(method="lm", na.rm=T, se=F, formula=y~x, aes(color=max_crep)) 
-
-ggplot(eye_mass, aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(outlier.shape = NA) + 
-  geom_point(aes(colour = tips), size = 2) +
-  stat_compare_means(method = "anova") # + facet_wrap(~max_crep)
-
-eye_mass%>% filter(Order %in% c("Ungulates (Artiodactyla)", "Cetacea"), max_crep %in% c("diurnal", "nocturnal", "crepusuclar", "cathemeral")) %>%
-  ggplot(., aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(outlier.shape = NA) + geom_jitter(aes(colour = Order)) #+ facet_wrap(~Order)
-
-#pinnipeds have no activity pattern data so we can remove them 
-eye_mass%>% filter(max_crep %in% c("diurnal", "nocturnal", "crepuscular", "cathemeral")) %>%
-  ggplot(., aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(aes(fill = max_crep), outlier.shape = NA) + geom_point(aes(colour = Order), size =2) +
-  stat_compare_means(method = "anova") #+facet_wrap(~Order)
-
-eye_mass%>% filter(Order %in% c("Ungulates (Artiodactyla)", "Cetacea"), max_crep %in% c("diurnal", "nocturnal", "crepusuclar", "cathemeral")) %>%
-  ggplot(., aes(x = max_crep, y = log(relative_eye_mass))) +geom_boxplot(outlier.shape = NA) + geom_point(aes(colour = tips)) #+ facet_wrap(~Order)
-
-ggplot(eye_mass, aes(x = max_crep, y = log(Eye_mass_g))) +geom_boxplot(outlier.shape = NA, aes(fill = max_crep)) + 
-  geom_point(aes(colour = Order), size = 2) +
-  stat_compare_means(method = "anova") # + facet_wrap(~max_crep)
-
-
 # Section 14: Baker et al artiodactyla orbit ratio -----------------------------------
-artio_eyes <- read_xlsx("C:\\Users\\ameli\\OneDrive\\Documents\\R_projects\\cetacean_discrete_traits\\Baker_2019.xlsx")
+artio_eyes <- read_xlsx("cetacean_discrete_traits\\Baker_2019.xlsx")
 artio_eyes <- artio_eyes[2: nrow(artio_eyes),]
 colnames(artio_eyes) <- c("tips", "Order", "Corneal_diameter", "Axial_length", "Activity_pattern", "Source")
 artio_eyes <- filter(artio_eyes, Order %in% c("Artiodactyla"))
@@ -570,7 +463,7 @@ artio_eyes$Orbit_ratio <- artio_eyes$Corneal_diameter/artio_eyes$Axial_length
 #drop unnecessary columns
 artio_eyes <- artio_eyes[, c("tips", "Orbit_ratio")]
 
-write.csv(artio_eyes, here("ruminant_eye_df.csv"), row.names = FALSE)
+write.csv(artio_eyes, here("cetacean_discrete_traits\\ruminant_eye_df.csv"), row.names = FALSE)
 
 # Section 7: IUCN ruminant latitude ----------------------------------------------
 
@@ -603,7 +496,7 @@ colnames(lat.df) <- c("Species_name", "min_lat", "max_lat")
 lat.df$tips <- str_replace(lat.df$Species_name, pattern = " ", replacement = "_")
 lat.df$mean_lat <- (lat.df$min_lat + lat.df$max_lat)/2
 
-write.csv(lat.df, here("ruminant_latitude_df.csv"), row.names = FALSE)
+write.csv(lat.df, here("cetacean_discrete_traits\\ruminant_latitude_df.csv"), row.names = FALSE)
 
 # Section 15: Artiodactyla pantheria data ---------------------------------
 
@@ -648,11 +541,11 @@ pantheria[pantheria$tips == "Taurotragus_oryx", "tips"] <- "Tragelaphus_oryx"
 # Alcelaphus_caama and Alcelaphus_lichtensteinii are subspecies of Alcelaphus buselaphus
 #Babyrousa_bolabatuensis only known from subfossil remains, may be a subspecies
 
-write.csv(pantheria, here("ruminant_pantheria_df.csv"), row.names = FALSE)
+write.csv(pantheria, here("cetacean_discrete_traits\\ruminant_pantheria_df.csv"), row.names = FALSE)
 
 # Section : One ruminant dataset to rule them all -------------------------
-artio_eyes <- read.csv(here("ruminant_eye_df.csv"))
-pantheria <- read.csv(here("ruminant_pantheria_df.csv"))
+artio_eyes <- read.csv(here("cetacean_discrete_traits\\ruminant_eye_df.csv"))
+pantheria <- read.csv(here("cetacean_discrete_traits\\ruminant_pantheria_df.csv"))
 sleepy_artio <- read.csv(here("Sleepy_artiodactyla_full.csv"))
 
 sleepy_artio <- sleepy_artio[, c("tips", "max_crep", "Diel_Pattern")]
@@ -668,15 +561,7 @@ artio_eyes <- merge(artio_eyes, lat.df, by = "tips", all = TRUE)
 write.csv(artio_eyes, here("artiodactyla_ecomorphology_dataset.csv"), row.names = FALSE)
 
 
-# Section: Cetacean_ecotrait_dataset -------------------------------------
-
-trait.data <- read.csv(here("cetacean_ecomorphology_dataset.csv"))
-
-trait.data <- trait.data %>% select(tips, Parvorder, Family, max_crep,
-                                    Orbit_ratio, Dive_depth_m, Mean_dive_depth_m, 
-                                    Body_mass_kg, Average_body_mass_kg, min_lat, max_lat, mean_lat)
-
-
+# Section: Cetacean_dive_data_with_sources-------------------------------------
 
 #save out the dive dataframe with sources
 url <- 'https://docs.google.com/spreadsheets/d/1_0ZS_tbddOCckkcKn9H5HpVRDZty4jhkUU20Nc0YYQY/edit?usp=sharing'
@@ -696,4 +581,4 @@ dive_full <- dive_full %>% pivot_longer(!Species_name, names_to = "names", value
   select(Species_name, values) %>% separate(., values, into = c("Maximum_dive_depth", "Reference"), sep = " ") %>%
   filter(Maximum_dive_depth != "NA") %>% arrange(Species_name)
 
-write.csv(dive_full, "C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/dive_dataframe_with_sources.csv")
+write.csv(dive_full, "C:/Users/ameli/Documents/R_projects/Amelia_figures/dive_dataframe_with_sources.csv")
