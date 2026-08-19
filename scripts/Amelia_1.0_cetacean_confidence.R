@@ -128,20 +128,9 @@ diel_full_long <- diel_full %>% pivot_longer(cols = Conf1.1:Conf5.4, names_to = 
 #remove whitespace
 diel_full_long$value <- str_trim(diel_full_long$value)
 
-#deal with partially unclear values which are all in confidence level 2
-#the 3 species it effect the final call for are not in the final mammal tree so we can keep as unclear and exclude later
-#keep unclear/crepuscular species since these are species with a crepusuclar evidence but unclear day-night preference
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/diurnal", replacement = "unclear")
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/cathemeral", replacement = "unclear")
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/nocturnal", replacement = "unclear")
-
 #remove unclear as an option since it gives no new information
 #this removes 57 entries all from confidence level 1 and 2 from 36 species
 diel_full_long[diel_full_long == "unclear"] <- NA
-
-#reclassify partially sources as cathemeral, does not change the call on species activity
-#diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "nocturnal/cathemeral", replacement = "cathemeral")
-#diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "diurnal/cathemeral", replacement = "cathemeral")
 
 #remove rows with empty values
 diel_full_long <- diel_full_long[diel_full_long$value != "",]
@@ -163,6 +152,23 @@ write.csv(diel_full_long, file = here("cetacean_confidence_long_df.csv"), row.na
 
 #read in the confidence data in long format
 diel_long <- read.csv(here("cetacean_confidence_long_df.csv"))
+
+#deal with partially unclear values which are all in confidence level 2
+#the 3 species it effect the final call for are not in the final mammal tree so we can keep as unclear and exclude later
+#keep unclear/crepuscular species since these are species with a crepusuclar evidence but unclear day-night preference
+diel_long$value <- str_replace_all(diel_long$value, pattern = "unclear/diurnal", replacement = "unclear")
+diel_long$value <- str_replace_all(diel_long$value, pattern = "unclear/cathemeral", replacement = "unclear")
+diel_long$value <- str_replace_all(diel_long$value, pattern = "unclear/nocturnal", replacement = "unclear")
+
+#reclassify partially sources as cathemeral, does not change the call on species activity
+diel_long$value <- str_replace_all(diel_long$value, pattern = "nocturnal/cathemeral", replacement = "cathemeral")
+diel_long$value <- str_replace_all(diel_long$value, pattern = "diurnal/cathemeral", replacement = "cathemeral")
+
+#replace "unclear" with NA since it adds no new information
+diel_long[diel_long == "unclear"] <- NA #84 species with some data
+diel_long <- filter(diel_long, !is.na(value))
+
+unique(diel_long$value)
 
 #separate out crepuscularity into its own column
 #confidence level 2 data will be unclear/crepuscular since they don't show evidence of nocturnal or diurnal activity
@@ -276,8 +282,7 @@ diel_long$crepuscular <- str_replace(diel_long$crepuscular, pattern = "crepuscul
 diel_long$crepuscular <- as.numeric(diel_long$crepuscular) #mark all crepuscular species with a value of 1
 diel_long$total <- 1 #used to calculate the percentage of crepuscular sources out of the total sources
 
-#if majority of vonf2-4 sources call a species crepuscular, evaluate to crepuscular
-
+#if majority of conf2-4 sources call a species crepuscular, evaluate to crepuscular
 crep_percent <- diel_long %>% filter(column %in% c("Conf2", "Conf3", "Conf4")) %>% group_by(Species_name, column) %>% 
   summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>% 
   pivot_wider(id_cols = !c(sum_total, sum_crep), names_from = "column", values_from = percent_crep)
@@ -305,13 +310,15 @@ final_df <- final_df %>% mutate(tabulated_diel = case_when(is.na(tabulated_crep)
                                                            tabulated_crep == "crepuscular" ~ paste(tabulated_diel_pattern, tabulated_crep, sep = "/")))
   
 current_dataset  <- final_df[, c("Species_name", "tabulated_diel")]
-previous_dataset <- read.csv(here("cetacean_tabulated_full.csv"))
+previous_dataset <- read.csv(here("cetacean_tabulated_full.csv")) %>% select(Species_name, tabulated_diel)
 
 table(previous_dataset$tabulated_diel)
 table(current_dataset$tabulated_diel)
 
 #check that nothing about the data has changed since running it last 
 all(previous_dataset == current_dataset)
+#current_dataset[!previous_dataset$tabulated_diel == current_dataset$tabulated_diel,] #check what doesn't match
+
 if(all(previous_dataset == current_dataset) == FALSE) stop("Dataset is not the same!")
 
 #add a column for tips, formatted as the species names appear in the phylogenetic tree
@@ -320,7 +327,7 @@ final_df$tips <- str_replace(final_df$Species_name, pattern = " ", replacement =
 #save out the new tabulated activity pattern dataframe
 write.csv(final_df[, c("Species_name", "tabulated_diel", "tips")], here("cetacean_tabulated_full.csv"), row.names = FALSE)
 
-# Section 3.5 Save out cetacean data frame with additional details -------
+# Section 4: Save out cetacean data frame with additional details -------
 #load in the dataframe with the tabulated activity patterns (calls based on source concordance)
 cetaceans_tabulated_full <- read.csv(here("cetacean_tabulated_full.csv")) #82 species with data 
 
@@ -361,7 +368,7 @@ cetaceans_full <- cetaceans_full %>% select("Species_name", "Order", "Suborder",
 #save out a local copy in case google goes bankrupt
 write.csv(cetaceans_full, file = here("cetaceans_full.csv"), row.names = FALSE)
 
-# Section 4 Concordance within confidence levels -------------------------------------------
+# Section 5: Concordance by activity pattern -------------------------------------------
 diel_full_long <- read.csv(here("cetacean_confidence_long_df.csv"))
 #read in the tabulated activity patterns
 diel_full <- read.csv(here("cetaceans_full.csv"))
@@ -405,7 +412,7 @@ confusion_plot_cet <-
 
 confusion_plot_cet
 
-# Section 4.5: Concordance between confidence levels ----------------------
+# Section 6: Concordance by category of evidence ----------------------
 diel_full_long <- read.csv(here("cetacean_confidence_long_df.csv"))
 unique(diel_full$value)
 
@@ -413,7 +420,7 @@ unique(diel_full$value)
 diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/nocturnal", replacement = "nocturnal")
 diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/diurnal", replacement = "diurnal")
 diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/crepuscular", replacement = "crepuscular")
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/cathemeral", replacement = "crepuscular")
+diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/cathemeral", replacement = "cathemeral")
 
 diel_full_long[diel_full_long == "unclear"] <- NA
 diel_full_long <- diel_full_long[!is.na(diel_full_long$value),]
@@ -423,7 +430,7 @@ unique(diel_full_long$value)
 
 #get a list of all the species with more than one source (should be most of them)
 species_list <- table(diel_full_long$Species_name)
-#should be 72 species with all cetaceans w multiple sources, 67 with only cetaceans in tree with mulitple sources
+#should be 72 species with all cetaceans w multiple sources, 67 with only cetaceans in tree with multiple sources
 species_list <- names(species_list[species_list > 1])
 
 #function for comparing entries
@@ -496,7 +503,7 @@ plot_countfreq_cet <-
 plot_countfreq_cet
 
 
-# Between source concordance by activity pattern --------------------------
+# Section 6.5: Concordance by category of evidence by parvorder --------------------------
 
 #divided by suborder
 #check to see if there is a difference in concordance for mysticeti vs odontoceti
@@ -605,7 +612,7 @@ pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/parvorder_category_confu
 plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
 dev.off()
 
-# Section 5: Concordance sankey -------------------------------------------
+# Section 7: Concordance sankey -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(
@@ -635,7 +642,7 @@ pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/cet_sankey_plots.pdf", w
 (sankey_cet + coord_flip())
 dev.off()
 
-# Section 6: Crepuscularity sankey -------------------------------------------
+# Section 8: Crepuscularity sankey -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(

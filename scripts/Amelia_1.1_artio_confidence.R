@@ -43,13 +43,9 @@ diel_full <- diel_full %>% relocate("Confe", .before = "Conf1")
 diel_full <- diel_full %>% relocate("Confy", .after = "Confe")
 colnames(diel_full) <- c("Species_name", "Family", colnames(diel_full)[3:27])
 
-#collapse columns
-#diel_full$Conf1
-
 diel_full[diel_full == ""] <- NA
 
-#replace strings
-#may change to cathemeral/nocturnal/crepuscular in future, 
+#replace strings with standard format
 diel_full <- data.frame(lapply(diel_full, function(x) {gsub("diurnal/weakly-crepuscular", "diurnal/crepuscular", x)}))
 diel_full <- data.frame(lapply(diel_full, function(x) {gsub("weakly-nocturnal/crepuscular", "nocturnal/cathemeral", x)}))
 diel_full <- data.frame(lapply(diel_full, function(x) {gsub("weakly-nocturnal", "nocturnal/cathemeral", x)}))
@@ -88,14 +84,11 @@ confidence_list <- lapply(unique(diel_full_long$Species_name), function(x){
   substr(Confidence, 5,5)
 })
 
-
 #we will add this data to the final dataframe in section 4
 confidence_df <- data.frame(Species_name = unique(diel_full_long$Species_name))
 confidence_df$Confidence <- as.numeric(confidence_list)
 
-
 write.csv(diel_full_long, here("confidence_artio_long.csv"), row.names = FALSE)
-
 
 # Section 3: Objective method of calling activity patterns ------------------
 
@@ -111,14 +104,12 @@ diel_full_long <- separate(diel_full_long, col = value, into = c("new_diel", "cr
 #set unclear to NA since it does not provide any additional information
 diel_full_long[diel_full_long == "unclear"] <- NA
 
-write.csv(diel_full_long, here("artio_confidence_long_final.csv"), row.names = FALSE)
-
 #pipeline for just ruminants
 #diel_full_long <- diel_full_long %>% filter(Family %in% c("Bovidae", "Cervidae", "Moschidae", "Tragulidae", "Giraffidae", "Antilocapridae"))
 
 #unlike cetaceans, artiodactyla activity patterns are less cryptic and have informative confidence level 1 sources (ie encyclopedias)
 #there are also many more species with only level 1 (60 sps) or 2 data (52 sps)
-#revise the function so that when level 3, 4, and 5 are inconclusive or missing it uses level 1 and 2 to make a call
+#revised the function so that when level 3, 4, and 5 are inconclusive or missing it uses level 1 and 2 to make a call
 which.max.simple=function(x,na.rm=TRUE,tie_value="NA"){
   if(na.rm)
   {
@@ -204,9 +195,6 @@ tabulateFuncArt <- function(x){
   return(activity_pattern)
 }
 
-#run each species through this function, x species with activity pattern data (di, noc or cath)
-#activity_pattern_df <- diel_full_long[!is.na(diel_full_long$new_diel),] %>% group_by(Species_name) %>% do(tabulated_diel_pattern = tabulateFunc3(.)) %>% unnest()
-
 activity_pattern_df <- diel_full_long[!is.na(diel_full_long$new_diel),] %>% group_by(Species_name) %>% do(tabulated_diel_pattern = tabulateFuncArt(.)) %>% unnest()
 #run each species through this function, x species with activity pattern data (di, noc or cath)
 activity_pattern_df <- separate(activity_pattern_df, col = "tabulated_diel_pattern", into = c("tabulated_diel_pattern", "level"), sep = " ")
@@ -218,14 +206,12 @@ unique(activity_pattern_df$tabulated_diel_pattern)
 #convert cathemeral-variable to cathemeral
 activity_pattern_df$tabulated_diel_pattern <- str_replace(activity_pattern_df$tabulated_diel_pattern, pattern = "cathemeral-variable", replacement = "cathemeral")
 
-#now determine whether or not each species is crepuscular
+#now determine whether or not each species is crepuscular based on majority evidence from all sources
 diel_full_long[is.na(diel_full_long)] <- "0"
 diel_full_long$crepuscular <- str_replace(diel_full_long$crepuscular, pattern = "crepuscular", replacement = "1")
 diel_full_long$crepuscular <- as.numeric(diel_full_long$crepuscular)
 diel_full_long$total <- 1
 diel_full_long$column <- substr(diel_full_long$column, start = 1, stop = 5)
-
-#x <- filter(diel_full_long, Species_name == "Aepyceros melampus")
 
 tabulateCrep = function(x){
   df <- aggregate(x$crepuscular, by = list(Category = x$column), FUN = sum)
@@ -262,7 +248,6 @@ tabulateCrep = function(x){
 }
 
 crep_df <- diel_full_long %>% group_by(Species_name) %>% do(tabulated_crep = tabulateCrep(.)) %>% unnest()
-
 crep_df <- crep_df[!is.na(crep_df$tabulated_crep),]
 
 #alternative method
@@ -377,18 +362,12 @@ artio_full$Order <- "Artiodactyla"
 #rename the row names to be the tip names so it's easier to subset by the tree tip labels later
 row.names(artio_full) <- artio_full$tips
 
-#create the three databases we will use 
 #Diel_Pattern includes all 6 possible trait states: di, di/crep, noc, noc/crep, cath, cath/crep
 #Max_crep will include 4 trait states and maximize crepuscularity: di, noc, cath and crep (di/crep, noc/crep, cath/crep)
 artio_full$max_crep <- artio_full$Diel_Pattern
 artio_full$max_crep <- str_replace(artio_full$max_crep, pattern = "nocturnal/crepuscular", replacement = "crepuscular")
 artio_full$max_crep <- str_replace(artio_full$max_crep, pattern = "diurnal/crepuscular", replacement = "crepuscular")
 artio_full$max_crep <- str_replace(artio_full$max_crep, pattern = "cathemeral/crepuscular", replacement = "crepuscular")
-#Max_dinoc will include 4 trait states and maximize di and noc, di (including di/crep), noc (including noc/crep), cath, crep (cath/crep)
-artio_full$max_dinoc <- artio_full$Diel_Pattern
-artio_full$max_dinoc <- str_replace(artio_full$max_dinoc, pattern = "nocturnal/crepuscular", replacement = "nocturnal")
-artio_full$max_dinoc <- str_replace(artio_full$max_dinoc, pattern = "diurnal/crepuscular", replacement = "diurnal")
-artio_full$max_dinoc <- str_replace(artio_full$max_dinoc, pattern = "cathemeral/crepuscular", replacement = "crepuscular")
 
 artio_full$Suborder <- "Unknown"
 for(i in 1:length(artio_full$Species_name)){
@@ -402,12 +381,11 @@ for(i in 1:length(artio_full$Species_name)){
     artio_full[i, "Suborder"] <- "Whippomorpha"}
 } 
 
-
 #add in maximum confidence data
 artio_full <- merge(artio_full, confidence_df, by = "Species_name")
 
 #put into same order as cetaceans
-artio_full <- artio_full %>% select("Species_name", "Order", "Suborder", "Parvorder", "Family", "Diel_Pattern", "max_crep", "max_dinoc", "Confidence", "tips")
+artio_full <- artio_full %>% select("Species_name", "Order", "Suborder", "Parvorder", "Family", "Diel_Pattern", "max_crep", "Confidence", "tips")
 
 #save out a local copy in case google goes bankrupt
 write.csv(artio_full, file = here("sleepy_artiodactyla_minus_cetaceans.csv"), row.names = FALSE)
@@ -531,7 +509,7 @@ diel_full_long <- read.csv(here("confidence_artio_long.csv"))
 #read in the tabulated activity patterns
 diel_full <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv"))
 #diel_full <- diel_full %>% filter(Suborder == "Ruminantia")
-diel_full <- merge(diel_full[, c("Species_name", "Diel_Pattern", "max_crep", "max_dinoc")], diel_full_long[c("Species_name", "column", "value")])
+diel_full <- merge(diel_full[, c("Species_name", "Diel_Pattern", "max_crep")], diel_full_long[c("Species_name", "column", "value")])
 
 diel_full$column <- substr(diel_full$column, 1,5)
 
