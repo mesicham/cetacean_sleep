@@ -128,6 +128,13 @@ diel_full_long <- diel_full %>% pivot_longer(cols = Conf1.1:Conf5.4, names_to = 
 #remove whitespace
 diel_full_long$value <- str_trim(diel_full_long$value)
 
+#deal with partially unclear values which are all in confidence level 2
+#keep since they are weighted low in the pipeline anyway
+#the 2 Inia species it effects the final day-night preference call for are not in the final mammal tree 
+diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/diurnal", replacement = "diurnal")
+diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/cathemeral", replacement = "cathemeral")
+diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/nocturnal", replacement = "nocturnal")
+
 #remove unclear as an option since it gives no new information
 #this removes 57 entries all from confidence level 1 and 2 from 36 species
 diel_full_long[diel_full_long == "unclear"] <- NA
@@ -152,13 +159,6 @@ write.csv(diel_full_long, file = here("cetacean_confidence_long_df.csv"), row.na
 
 #read in the confidence data in long format
 diel_long <- read.csv(here("cetacean_confidence_long_df.csv"))
-
-#deal with partially unclear values which are all in confidence level 2
-#the 3 species it effect the final call for are not in the final mammal tree so we can keep as unclear and exclude later
-#keep unclear/crepuscular species since these are species with a crepusuclar evidence but unclear day-night preference
-diel_long$value <- str_replace_all(diel_long$value, pattern = "unclear/diurnal", replacement = "unclear")
-diel_long$value <- str_replace_all(diel_long$value, pattern = "unclear/cathemeral", replacement = "unclear")
-diel_long$value <- str_replace_all(diel_long$value, pattern = "unclear/nocturnal", replacement = "unclear")
 
 #reclassify partially sources as cathemeral, does not change the call on species activity
 diel_long$value <- str_replace_all(diel_long$value, pattern = "nocturnal/cathemeral", replacement = "cathemeral")
@@ -305,7 +305,7 @@ crep_df <- diel_long  %>% filter(column %in% c("Conf2", "Conf3", "Conf4")) %>% g
   ))
 
 
-final_df <- merge(crep_df, activity_pattern_df, by = "Species_name", all.y = TRUE)
+final_df <- merge(crep_df, activity_pattern_df, by = "Species_name", all = TRUE)
 final_df <- final_df %>% mutate(tabulated_diel = case_when(is.na(tabulated_crep) ~ tabulated_diel_pattern,
                                                            tabulated_crep == "crepuscular" ~ paste(tabulated_diel_pattern, tabulated_crep, sep = "/")))
   
@@ -318,7 +318,6 @@ table(current_dataset$tabulated_diel)
 #check that nothing about the data has changed since running it last 
 all(previous_dataset == current_dataset)
 #current_dataset[!previous_dataset$tabulated_diel == current_dataset$tabulated_diel,] #check what doesn't match
-
 if(all(previous_dataset == current_dataset) == FALSE) stop("Dataset is not the same!")
 
 #add a column for tips, formatted as the species names appear in the phylogenetic tree
@@ -375,13 +374,20 @@ diel_full <- read.csv(here("cetaceans_full.csv"))
 diel_full <- merge(diel_full[, c("Species_name", "Parvorder", "Diel_Pattern", "max_crep")], diel_full_long[c("Species_name", "column", "value")])
 
 diel_full$column <- substr(diel_full$column, 1,5)
-unique(diel_full$value)
 
 #for max crep dataset
 diel_full <- data.frame(lapply(diel_full, function(x) {gsub("unclear/crepuscular", "crepuscular", x)}))
-diel_full <- data.frame(lapply(diel_full, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
-diel_full <- data.frame(lapply(diel_full, function(x) {gsub("diurnal/crepuscular", "crepuscular", x)}))
 diel_full <- data.frame(lapply(diel_full, function(x) {gsub("nocturnal/crepuscular", "crepuscular", x)}))
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("diurnal/crepuscular", "crepuscular", x)}))
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("diurnal/cathemeral", "cathemeral", x)}))
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("nocturnal/cathemeral", "cathemeral", x)}))
+
+unique(diel_full$value)
+
+#replace "unclear" with NA since it adds no new information
+diel_full[diel_full == "unclear"] <- NA 
+diel_full <- filter(diel_full, !is.na(value))
 
 #filter
 mulitple_sources <- diel_full %>% count(Species_name) %>% filter(n>1)
@@ -415,12 +421,6 @@ confusion_plot_cet
 # Section 6: Concordance by category of evidence ----------------------
 diel_full_long <- read.csv(here("cetacean_confidence_long_df.csv"))
 unique(diel_full$value)
-
-#remove unclear as an option, since we aren't interested in if unclear matches with unclear
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/nocturnal", replacement = "nocturnal")
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/diurnal", replacement = "diurnal")
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/crepuscular", replacement = "crepuscular")
-diel_full_long$value <- str_replace_all(diel_full_long$value, pattern = "unclear/cathemeral", replacement = "cathemeral")
 
 diel_full_long[diel_full_long == "unclear"] <- NA
 diel_full_long <- diel_full_long[!is.na(diel_full_long$value),]
@@ -612,7 +612,7 @@ pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/parvorder_category_confu
 plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
 dev.off()
 
-# Section 7: Concordance sankey -------------------------------------------
+# Section 7: Day-night preference sankey pipeline -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(
@@ -642,7 +642,7 @@ pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/cet_sankey_plots.pdf", w
 (sankey_cet + coord_flip())
 dev.off()
 
-# Section 8: Crepuscularity sankey -------------------------------------------
+# Section 8: Crepuscular preference sankey pipeline -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step
 df <- data.frame(

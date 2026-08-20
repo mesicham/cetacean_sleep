@@ -1,18 +1,18 @@
 #run the bridge only model for all mammal suborders in bennie et al data
 
 mam.tree <- readRDS(here("maxCladeCred_mammal_tree.rds"))
-trait.data <- read.csv(here("Bennie_mam_data.csv"))
-trait.data <- trait.data[!duplicated(trait.data$tips), c("max_crep", "tips", "Order")]
-trait.data <- trait.data[trait.data$max_crep %in% c("cathemeral", "nocturnal", "diurnal", "crepuscular"), ]
+trait.data <- read.csv(here("Bennie_mam_data.csv")) %>% select(tips, Bennie_activity_pattern, Order)
+colnames(trait.data) <- c("tips", "max_crep", "Order")
+trait.data <- trait.data[!duplicated(trait.data$tips), ]
 trait.data <- trait.data[trait.data$tips %in% mam.tree$tip.label,] #4228 mammals in final tree
 mam.tree <- keep.tip(mam.tree, tip = trait.data$tips) #we will subset again by order later
 table(trait.data$Order) 
 
 table(trait.data$Order, trait.data$max_crep) 
 
-ggplot(trait.data, aes(x = Order, fill = max_crep)) + geom_bar()
+ggplot(trait.data, aes(x = Order, fill = max_crep)) + geom_bar() + theme_classic()
 
-#optional: filter for orders with 4 states
+#optional: filter for orders with 4 trait states
 trait.data <- trait.data %>% group_by(Order) %>% filter("diurnal" %in% max_crep & "nocturnal" %in% max_crep & "cathemeral" %in% max_crep & "crepuscular" %in% max_crep)
 
 #filter for orders that have over 100 species

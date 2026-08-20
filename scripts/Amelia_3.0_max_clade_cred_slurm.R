@@ -7,9 +7,6 @@ library(here)
 library(ggtree)
 #manipulating dataframes
 library(dplyr)
-#install.packages("tictoc")
-library(tictoc)
-
 
 ## Packages for phylogenetic analysis in R (overlapping uses)
 ## They aren't all used here, but you should have them all
@@ -31,7 +28,7 @@ if(!(args[1] %in% c("six_state", "four_state_max_crep", "four_state_max_dinoc"))
   stop("first argument must be states in the model")
 }
 
-if(!(args[2] %in% c("cetaceans", "whippomorpha", "artiodactyla", "artiodactyla_minus_cetaceans", "ruminants", "mammals"))) {  
+if(!(args[2] %in% c("cetaceans", "whippomorpha", "artiodactyla", "artiodactyla_minus_cetaceans", "ruminants"))) {  
   stop("second argument must be the phylogenetic tree")
 }
 
@@ -70,7 +67,7 @@ if(args[2] == "whippomorpha"){
 
 if(args[2] == "mammals"){
   trait.data <- read.csv(here("Bennie_mam_data.csv"))
-  trait.data$max_crep <- trait.data$Bennie_diel
+  trait.data$max_crep <- trait.data$Bennie_activity_pattern
 }
 
 #select the number of trait states
@@ -139,29 +136,18 @@ if("ARD" %in% args){
 }
 
 
-if("bridge_only" %in% args & "max_dinoc" %in% args){
-  bridge_only <- corHMM(phy = phylo_trees, data = trait.data, rate.cat = hidden_rate, rate.mat = matrix(c(0,2,3,4,0,0,7,0,0), ncol = 3, nrow = 3, dimnames = list(c("(1, R1)", "(2, R1)", "(3,R1)"), c("(1, R1)", "(2, R1)", "(3,R1)"))), node.states = "marginal")
-}
-
-if("bridge_only" %in% args & "max_crep" %in% args){
-  bridge_only <- corHMM(phy = phylo_trees, data = trait.data, rate.cat = hidden_rate, rate.mat = matrix(c(0,2,3,4,0,0,7,0,0), ncol = 3, nrow = 3, dimnames = list(c("(1, R1)", "(2, R1)", "(3,R1)"), c("(1, R1)", "(2, R1)", "(3,R1)"))), node.states = "marginal")
-}
-
-
 #for four state
 if("bridge_only" %in% args & "four_state_max_dinoc" %in% args){
   bridge_only <- corHMM(phy = phylo_trees, data = trait.data, rate.cat = hidden_rate, rate.mat = matrix(c(0,1,2,3,4,0,5,6,7,8,0, 0,10,11,0,0), ncol = 4, nrow = 4, dimnames = list(c("(1, R1)", "(2, R1)", "(3,R1)", "(4, R1)"), c("(1, R1)", "(2, R1)", "(3,R1)", "(4, R1)"))), node.states = "marginal")
 }
 
 if("bridge_only" %in% args & "four_state_max_crep" %in% args){
-  bridge_only <- corHMM(phy = phylo_trees, data = trait.data, rate.cat = hidden_rate, rate.mat = matrix(c(0,1,2,3,4,0,5,6,7,8,0, 0,10,11,0,0), ncol = 4, nrow = 4, dimnames = list(c("(1, R1)", "(2, R1)", "(3,R1)", "(4, R1)"), c("(1, R1)", "(2, R1)", "(3,R1)", "(4, R1)"))), node.states = "marginal")
+  bridge_only <- corHMM(phy = phylo_trees, data = trait.data, rate.cat = hidden_rate, rate.mat = matrix(c(0,1,2,3,4,0,5,6,7,8,0,0,10,11,0,0), ncol = 4, nrow = 4, dimnames = list(c("(1, R1)", "(2, R1)", "(3,R1)", "(4, R1)"), c("(1, R1)", "(2, R1)", "(3,R1)", "(4, R1)"))), node.states = "marginal")
 }
 
-
-
-# Section 5: Save the results out and extract likelihoods  --------
+# Section 5: Save the results out and extract likelihoods --------
 #use paste() to create a filename with all of the arguments
 result_list <- lapply(args[-(1:2)], function(x) eval(as.name(x)))
 names(result_list) <- paste(args[-(1:2)], "_model", sep = "")
 
-saveRDS(result_list, paste(args[2], "june_2026_max_clade_cred", args[1], "traits", paste0(args[-(1:2)], sep = "", collapse = "_"), "models", sep = "_"))
+saveRDS(result_list, paste(args[2], "max_clade_cred", args[1], "traits", paste0(args[-(1:2)], sep = "", collapse = "_"), "models", Sys.Date(), ".rds", sep = "_"))

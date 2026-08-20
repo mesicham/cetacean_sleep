@@ -7,8 +7,6 @@ library(here)
 library(ggtree)
 #manipulating dataframes
 library(dplyr)
-#install.packages("tictoc")
-library(tictoc)
 
 ## Packages for phylogenetic analysis in R (overlapping uses)
 ## They aren't all used here, but you should have them all
@@ -182,5 +180,5 @@ if("CONSYM" %in% args & "four_state_max_crep" %in% args){
 result_list <- lapply(args[-(1:2)], function(x) eval(as.name(x))) 
 names(result_list) <- paste(args[-(1:2)], "_model", sep = "")
 
-saveRDS(result_list, paste("august_15_", args[2], args[1], "traits", paste0(args[-(1:2)], sep = "", collapse = "_"), "models", sep = "_"))
+saveRDS(result_list, paste(args[2], args[1], "traits", paste0(args[-(1:2)], Sys.Date(), ".rds", sep = "", collapse = "_"), "models", sep = "_"))
 

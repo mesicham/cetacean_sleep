@@ -60,7 +60,7 @@ diel_full <- data.frame(lapply(diel_full, function(x) {gsub("unclear/diurnal", "
 write.csv(diel_full, here("confidence_artio_wide.csv"), row.names = FALSE)
 
 
-# Section 2: Artiodactyla long format -----------------------------------
+# Section 2: Transform data into long format -----------------------------------
 #read in wide data
 diel_full <- read.csv(here("confidence_artio_wide.csv"))
 
@@ -155,8 +155,6 @@ which.max.simple=function(x,na.rm=TRUE,tie_value="NA"){
   }
 }
 
-x <- filter(diel_full_long, Species_name == "Cephalophus jentinki")
-
 tabulateFuncArt <- function(x){
   if(x %>% filter(column == "Conf4") %>% nrow() > 1 & !is.na(which.max.simple(tabulate(match(x$new_diel[x$column %in% c("Conf4")], unique(x$new_diel))), tie_value = "NA"))){
     activity_pattern <- unique(x$new_diel)[which.max.simple(tabulate(match(x$new_diel[x$column %in% c("Conf4")], unique(x$new_diel))), tie_value = "NA")]
@@ -213,123 +211,55 @@ diel_full_long$crepuscular <- as.numeric(diel_full_long$crepuscular)
 diel_full_long$total <- 1
 diel_full_long$column <- substr(diel_full_long$column, start = 1, stop = 5)
 
-tabulateCrep = function(x){
-  df <- aggregate(x$crepuscular, by = list(Category = x$column), FUN = sum)
-  #confidence level 1 and 5 don't have any information on crepuscularity so remove them, they will always be zero
-  df2 <- aggregate(x$total, by = list(Category = x$column), FUN = sum)
-  df2 <- merge(df, df2, by = "Category")
-  df2$percentage <- round((df2$x.x/df2$x.y) * 100, digits = 1)
-  #define what percentage of each category we want to call a species crepuscular,
-  df3 <- data.frame(Category = c("Conf1", "Conf2", "Conf3", "Conf4", "Conf5"), cutoff = c(50, 50, 50, 20,20))
-  df2 <- merge(df2, df3, by = "Category")  #species can have Conf2, Conf3 and/or Conf4 evidence, when merged any missing categories will be dropped
-  df2$crep_evidence <- df2$percentage >= df2$cutoff
-  df2[df2$crep_evidence == TRUE, "crep_evidence"] <- "crepuscular"
-  df2[df2$crep_evidence == FALSE, "crep_evidence"] <- "non"
-  unique_percents <- unique(df2$crep_evidence)
-  
-  #check if there is a tie, if so take the higher confidence level
-  if(nrow(df2[df2$crep_evidence == "crepuscular",]) == nrow(df2[df2$crep_evidence == "non",]) ){
-    #take the higher confidence level to break ties
-    total_evidence <- df2[which(df2$Category == max(df2$Category)), "crep_evidence"]
-    #alternative method: take whatever has more sources
-    #total_evidence <- df2[which.max(df2$x.y), "crep_evidence"]
-  } else {
-    #if no tie then take the maximum value
-    total_evidence <- unique_percents[which.max(tabulate(match(df2$crep_evidence, unique_percents)))]
-  }
-  
-  #additional screen: if there is level 4 evidence then evaluate to true 
-  if(nrow(filter(df2, Category == "Conf4"))==1){
-    if(df2[df2$Category == "Conf4", "crep_evidence"] == "crepuscular"){
-      total_evidence <- "crepuscular"
-    }
-  } 
-  return(total_evidence)
-}
-
-crep_df <- diel_full_long %>% group_by(Species_name) %>% do(tabulated_crep = tabulateCrep(.)) %>% unnest()
-crep_df <- crep_df[!is.na(crep_df$tabulated_crep),]
-
-#alternative method
-test <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Conf4", "Conf5")) %>% group_by(Species_name, column) %>% 
+crep_percent <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Conf4", "Conf5")) %>% group_by(Species_name, column) %>% 
   summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>% 
   pivot_wider(id_cols = !c(sum_total, sum_crep), names_from = "column", values_from = percent_crep)
 
-test <- test %>% mutate(evidence1 = as.numeric(Conf1 >= 50), evidence2 = as.numeric(Conf2 >= 50), evidence3 = as.numeric(Conf3 >=50), evidence4 = as.numeric(Conf4 >=20), evidence5 = as.numeric(Conf5>=20)) %>%
-  mutate(total_evidence = sum(c_across(evidence1:evidence5),na.rm=TRUE), total_sources = sum(as.numeric(!is.na(c_across(evidence1:evidence5))))) %>%
-  mutate(tabulated_crep = case_when(total_evidence == 0 ~ "non",
-                                    total_evidence/total_sources > 0.5 ~ "crepuscular",
-                                    total_evidence/total_sources < 0.5 ~ "non",
-                                    #total_evidence/total_sources == 0.5 ~ "tie"))
-                                    #to break ties use the higher confidence level
-                                    total_sources == 2 & evidence4 == 0 ~ "non",
-                                    total_sources == 2 & evidence4 == 1 ~ "crepuscular",
-                                    total_sources == 2 & evidence3 == 1 & evidence2 == 0 ~ "crepuscular",
-                                    total_sources == 2 & evidence3 == 0 & evidence2 == 1 ~ "non",
-                                    total_sources == 2 & evidence3 == 1 & evidence1 == 0 ~ "crepuscular",
-                                    total_sources == 2 & evidence3 == 0 & evidence1 == 1 ~ "non",
-                                    total_sources == 2 & evidence2 == 1 & evidence1 == 0 ~ "crepuscular",
-                                    total_sources == 2 & evidence2 == 0 & evidence1 == 1  ~ "non"))
-
-
-matches <- crep_df[crep_df$Species_name %in% test$Species_name, "tabulated_crep"] == test[, c("tabulated_crep")]
-test[!matches,]
-
-#alternative method: what if I didn't average by category like the day-night pipeline
-test2 <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Conf4", "Conf5")) %>% group_by(Species_name) %>% 
+#if majority of conf2-4 sources call a species crepuscular, evaluate to crepuscular
+crep_df <- diel_full_long %>% filter(column %in% c("Conf1", "Conf2", "Conf3", "Conf4", "Conf5")) %>% group_by(Species_name) %>% 
   summarize(sum_crep = sum(crepuscular), sum_total = sum(total))  %>% mutate(percent_crep = (sum_crep/sum_total)*100) %>%
-  merge(., test[, c(1:6)], by = "Species_name") %>%
+  merge(., crep_percent[, c(1:6)], by = "Species_name") %>%
   mutate(tabulated_crep = case_when(
-    #Conf4 >= 20 ~ "conf4_crepuscular",
     percent_crep > 50  ~ "crepuscular",
-    percent_crep < 50  ~ "non",
-    percent_crep == 50 ~ "tie" #when there is a tie use higher confidence source as tiebreaker
-    # percent_crep == 50 & Conf3 >= 50 & Conf2 <= 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf3 <= 50 & Conf2 >= 50 ~ "non",
-    # percent_crep == 50 & Conf3 >= 50 & Conf4 < 20 ~ "non",
-    # percent_crep == 50 & Conf2 >= 50 & Conf1 < 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf2 <= 50 & Conf1 >= 50 ~ "non",
-    # percent_crep == 50 & Conf4 >= 50 & Conf1 <= 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf4 <= 50 & Conf1 >= 50 ~ "non",
-    # percent_crep == 50 & Conf3 >= 50 & Conf1 <= 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf3 <= 50 & Conf1 >= 50 ~ "non",
-    # # #if the sources are in the same confidence level, evaluate to crep
-    # percent_crep == 50 & Conf5 == 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf2 == 50 ~ "crepuscular",
-    # percent_crep == 50 & Conf1 == 50 ~ "crepuscular"
+    percent_crep < 50  ~ NA,
+    #when there is a tie use higher confidence source as tiebreaker
+    percent_crep == 50 & Conf3 >= 50 & Conf2 <= 50 ~ "crepuscular",
+    percent_crep == 50 & Conf3 <= 50 & Conf2 >= 50 ~ NA,
+    percent_crep == 50 & Conf3 >= 50 & Conf4 < 20 ~ NA,
+    percent_crep == 50 & Conf2 >= 50 & Conf1 < 50 ~ "crepuscular",
+    percent_crep == 50 & Conf2 <= 50 & Conf1 >= 50 ~ NA,
+    percent_crep == 50 & Conf4 >= 50 & Conf1 <= 50 ~ "crepuscular",
+    percent_crep == 50 & Conf4 <= 50 & Conf1 >= 50 ~ NA,
+    percent_crep == 50 & Conf4 >= 50 & Conf3 <= 50 ~ "crepuscular",
+    percent_crep == 50 & Conf4 <= 50 & Conf3 >= 50 ~ NA,
+    percent_crep == 50 & Conf3 >= 50 & Conf1 <= 50 ~ "crepuscular",
+    percent_crep == 50 & Conf3 <= 50 & Conf1 >= 50 ~ NA,
+    # #if the sources are in the same confidence level, evaluate to crep
+    percent_crep == 50 & Conf5 == 50 ~ "crepuscular",
+    percent_crep == 50 & Conf4 == 50 ~ "crepuscular",
+    percent_crep == 50 & Conf3 == 50 ~ "crepuscular",
+    percent_crep == 50 & Conf2 == 50 ~ "crepuscular",
+    percent_crep == 50 & Conf1 == 50 ~ "crepuscular"
   ))
 
-matches <- crep_df[crep_df$Species_name %in% test2$Species_name, "tabulated_crep"] == test2[, c("tabulated_crep")]
-test2[!matches,]
-table(test2$tabulated_crep)
-
-final_df <- merge(crep_df, activity_pattern_df, by = "Species_name")
-final_df$tabulated_diel <- final_df$tabulated_diel_pattern
-for(i in 1:nrow(final_df)){
-  if(final_df[i, "tabulated_crep"] == "crepuscular"){
-    final_df[i, "tabulated_diel"] <- paste(final_df[i, "tabulated_diel_pattern"], "crepuscular", sep = "/")
-  }
-}
+final_df <- merge(crep_df, activity_pattern_df, by = "Species_name", all = TRUE)
+final_df <- final_df %>% mutate(tabulated_diel = case_when(is.na(tabulated_crep) ~ tabulated_diel_pattern,
+                                                           tabulated_crep == "crepuscular" ~ paste(tabulated_diel_pattern, tabulated_crep, sep = "/")))
 
 unique(final_df$tabulated_diel)
 
 final_df <- final_df[, c("Species_name", "tabulated_diel")]
 
 #check that nothing about the data has changed since running it last 
-previous_dataset <- read.csv(here("artio_tabulated_full.csv"))
-previous_dataset$tips <- str_replace(previous_dataset$Species_name, pattern = " ", replacement = "_")
-previous_dataset <- previous_dataset[previous_dataset$tips %in% mam.tree$tip.label, ]
-
+previous_dataset <- read.csv(here("artio_tabulated_full.csv")) %>% select(Species_name, tabulated_diel)
 current_dataset <- final_df
-current_dataset$tips <- str_replace(current_dataset$Species_name, pattern = " ", replacement = "_")
-current_dataset <- current_dataset[current_dataset$tips %in% mam.tree$tip.label, ]
+
+table(previous_dataset$tabulated_diel)
+table(current_dataset$tabulated_diel)
+
 all(previous_dataset == current_dataset)
+current_dataset[previous_dataset$tabulated_diel != current_dataset$tabulated_diel,] #check what doesn't match
 if(all(previous_dataset == current_dataset) == FALSE) stop("Dataset is not the same!")
-
-current_dataset[previous_dataset$tabulated_diel != current_dataset$tabulated_diel,]
-
 
 #add a column for tips, formatted as the species names appear in the phylogenetic tree
 final_df$tips <- str_replace(final_df$Species_name, pattern = " ", replacement = "_")
@@ -415,7 +345,53 @@ whippomorpha <- read.csv(here("whippomorpha.csv")) # should be 100 sps(includes 
 whippomorpha_high_conf <- whippomorpha %>% filter(Confidence %in% c(3,4,5)) #should be 76 species
 write.csv(whippomorpha_high_conf, file = here("whippomorpha_high_conf.csv"), row.names = FALSE)
 
-# Section 5: Concordance between confidence levels (artio/ruminants) ---------------------------------------------
+# Section 5: Concordance by activity patterns -------------------------
+diel_full_long <- read.csv(here("confidence_artio_long.csv"))
+#read in the tabulated activity patterns
+diel_full <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv"))
+#diel_full <- diel_full %>% filter(Suborder == "Ruminantia")
+diel_full <- merge(diel_full[, c("Species_name", "Diel_Pattern", "max_crep")], diel_full_long[c("Species_name", "column", "value")])
+
+diel_full$column <- substr(diel_full$column, 1,5)
+
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("unclear/crepuscular", "crepuscular", x)}))
+
+#for max crep dataset
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("diurnal/crepuscular", "crepuscular", x)}))
+diel_full <- data.frame(lapply(diel_full, function(x) {gsub("nocturnal/crepuscular", "crepuscular", x)}))
+
+diel_full[diel_full == "unclear"] <- NA
+diel_full <- diel_full[!is.na(diel_full$value),]
+
+#filter
+mulitple_sources <- diel_full %>% count(Species_name) %>% filter(n>1)
+diel_full_filtered <- diel_full[diel_full$Species_name %in% mulitple_sources$Species_name,]
+#this removes 115 species without an informative second source (120 out of 235 have a second source)
+
+concordance <- as.data.frame(table(diel_full_filtered$max_crep, diel_full_filtered$value))
+colnames(concordance) <- c("actual", "predicted", "freq")
+totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
+colnames(totals_df) <- c("actual", "total")
+concordance <- merge(concordance, totals_df, by = "actual")
+concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
+
+confusion_plot_rum <-
+  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label= paste0(percent, "%")), size = 3) +
+  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
+  labs(x = "Actual (final activity pattern)", y = "Predicted (activity pattern of sources)") + 
+  theme_classic() +
+  scale_x_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
+  scale_y_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
+  theme(legend.position = "none", axis.text = element_text(size = 9), axis.title = element_text(size = 11))
+
+#save out combined plots
+pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_confusion_matrix.pdf", width = 4.3, height = 4.3)
+(confusion_plot_cet + labs(x = "", y = "")) /
+  (confusion_plot_rum + theme(axis.title = element_blank()))
+dev.off()
+
+# Section 6: Concordance by categories of evidence ---------------------------------------------
 diel_full_long <- read.csv(here("confidence_artio_long.csv"))
 
 #filter for just ruminants
@@ -504,54 +480,8 @@ pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_category_confus
 plot_countfreq_cet + plot_countfreq_rum
 dev.off()
 
-# Section 6: Concordance within confidence levels artio/ruminants -------------------------
-diel_full_long <- read.csv(here("confidence_artio_long.csv"))
-#read in the tabulated activity patterns
-diel_full <- read.csv(here("sleepy_artiodactyla_minus_cetaceans.csv"))
-#diel_full <- diel_full %>% filter(Suborder == "Ruminantia")
-diel_full <- merge(diel_full[, c("Species_name", "Diel_Pattern", "max_crep")], diel_full_long[c("Species_name", "column", "value")])
 
-diel_full$column <- substr(diel_full$column, 1,5)
-
-diel_full <- data.frame(lapply(diel_full, function(x) {gsub("unclear/crepuscular", "crepuscular", x)}))
-
-#for max crep dataset
-diel_full <- data.frame(lapply(diel_full, function(x) {gsub("cathemeral/crepuscular", "crepuscular", x)}))
-diel_full <- data.frame(lapply(diel_full, function(x) {gsub("diurnal/crepuscular", "crepuscular", x)}))
-diel_full <- data.frame(lapply(diel_full, function(x) {gsub("nocturnal/crepuscular", "crepuscular", x)}))
-
-diel_full[diel_full == "unclear"] <- NA
-diel_full <- diel_full[!is.na(diel_full$value),]
-
-#filter
-mulitple_sources <- diel_full %>% count(Species_name) %>% filter(n>1)
-diel_full_filtered <- diel_full[diel_full$Species_name %in% mulitple_sources$Species_name,]
-#this removes 115 species without an informative second source (120 out of 235 have a second source)
-
-concordance <- as.data.frame(table(diel_full_filtered$max_crep, diel_full_filtered$value))
-colnames(concordance) <- c("actual", "predicted", "freq")
-totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
-colnames(totals_df) <- c("actual", "total")
-concordance <- merge(concordance, totals_df, by = "actual")
-concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
-
-confusion_plot_rum <-
-  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label= paste0(percent, "%")), size = 3) +
-  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Actual (final activity pattern)", y = "Predicted (activity pattern of sources)") + 
-  theme_classic() +
-  scale_x_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
-  scale_y_discrete(labels = c("Cathemeral", "Crepuscular", "Diurnal", "Nocturnal")) +
-  theme(legend.position = "none", axis.text = element_text(size = 9), axis.title = element_text(size = 11))
-
-#save out combined plots
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_confusion_matrix.pdf", width = 4.3, height = 4.3)
-(confusion_plot_cet + labs(x = "\n", y = "")) /
-  (confusion_plot_rum + theme(axis.title = element_blank()))
-dev.off()
-
-
-# Section 7: Sankey pipeline flowchart ------------------------------------------
+# Section 7: Day-night preference sankey pipeline ------------------------------------------
 
 #non-cetacean artiodactyls
 df <- data.frame(
@@ -585,7 +515,7 @@ pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/rum_sankey_plots.pdf", w
 (sankey_rum + coord_flip())
 dev.off()
 
-# Section 8: Crepuscularity sankey -------------------------------------------
+# Section 8: Crepuscular preference sankey pipeline -------------------------------------------
 
 #create dataframe of the number of species that had activity patterns determined at each step, artio
 df <- data.frame(
@@ -623,16 +553,20 @@ sankey_crep_rum + coord_flip()
 dev.off()
 
 # Section 9: Number of sources in each category-------------------------------------------------------
-test_diel_long <- read.csv(here("cetacean_confidence_long_final.csv"))
-sources_df <- as.data.frame(table(test_diel_long$column)) %>% mutate(Clade = "Cetacea")
+cet_diel_long <- read.csv(here("cetacean_confidence_long_df.csv"))
+cet_diel_long$column <- gsub("\\..*","",cet_diel_long$column)
 
-diel_full_long <- read.csv(here("artio_confidence_long_final.csv"))
-sources_df <- rbind(sources_df, (as.data.frame(table(diel_full_long$column))) %>% mutate(Clade = "Terrestrial \nartiodactyls"))
+sources_df <- as.data.frame(table(cet_diel_long$column)) %>% mutate(Clade = "Cetacea")
+
+art_full_long <- read.csv(here("confidence_artio_long.csv"))
+art_full_long$column <- gsub("\\..*","",art_full_long$column)
+sources_df <- rbind(sources_df, (as.data.frame(table(art_full_long$column))) %>% mutate(Clade = "Terrestrial \nartiodactyls"))
 
 number_sources <- ggplot(sources_df, aes(x = Var1, y = Freq, fill = Clade)) + geom_col(position = position_dodge()) +
   labs(y = "Number of sources", x = "Data category") + theme_classic() + scale_fill_manual(values = c("#070E8A","#2E9DFF")) +
   scale_x_discrete(labels = c("A", "B", "C", "D", "E")) +
   theme(panel.grid = element_blank(), legend.position = "none")
+number_sources
 
 #plot number of sources per species
 sources_df <- as.data.frame(table(test_diel_long$Species_name)) %>% mutate(Clade = "Cetacea")
@@ -676,13 +610,10 @@ cetacean_numbers <- cet_sources %>% select(Species_name, numbered) %>% pivot_wid
 
 #replace sources in the dataset with their reference numbers
 cetaceans_full <- read.csv(here("cetaceans_full.csv"))
-
 cetaceans_full <- cetaceans_full[!is.na(cetaceans_full$Diel_Pattern), c(1, 3, 5:7)]
-
 cetaceans_full <- merge(cetaceans_full, cetacean_numbers, by = "Species_name")
 
 colnames(cetaceans_full) <- c("Species_name", "Suborder", "Family", "Activity_pattern", "Maximum_crepuscularity_activity_pattern", "References")
-
 
 #terrestrial artiodactyls
 url <- 'https://docs.google.com/spreadsheets/d/1JGC7NZE_S36-IgUWpXBYyl2sgnBHb40DGnwPg2_F40M/edit?gid=562902012#gid=562902012'
@@ -719,4 +650,3 @@ artio_full <- artio_full %>% mutate(References = gsub("c(", "", References, fixe
 #save to figures folder
 write.csv(artio_full, "C:/Users/ameli/Documents/R_projects/Amelia_figures/artiodactyla_with_sources.csv", row.names = FALSE)
 write.csv(artio_sources, "C:/Users/ameli/Documents/R_projects/Amelia_figures/artiodactyla_references.csv", row.names = FALSE)
-
