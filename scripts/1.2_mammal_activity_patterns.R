@@ -553,16 +553,16 @@ proportion_plot
 
 # Section 9: save out combined plots----------------------------------------------
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_sankey_plots0.pdf", width = 8.6, height = 3.5)
+pdf(here("Figure_folder/combined_sankey_plots0.pdf"), width = 8.6, height = 3.5)
 (proportion_plot + theme(legend.position = "right")) + (matches_plot + theme(legend.position = "right")) +
   guide_area() +
   plot_layout(guides = 'collect', widths = c(0.9, 0.7, 0.4))
 dev.off()
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_sankey_plots1.pdf", width = 8.8, height = 4)
+pdf(here("Figure_folder/combined_sankey_plots1.pdf"), width = 8.8, height = 4)
 Baker_sankey + Bennie_sankey + Maor_sankey2
 dev.off()
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_sankey_plots2.pdf", width = 8.5, height = 3)
+pdf(here("Figure_folder/combined_sankey_plots2.pdf"), width = 8.5, height = 3)
 confusion_plot_baker + confusion_plot_bennie + confusion_plot_maor + plot_layout(widths = c(0.7, 1, 1.3))
 dev.off()

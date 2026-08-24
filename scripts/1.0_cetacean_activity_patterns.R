@@ -608,7 +608,7 @@ plot_countfreq_cet_myst <-
     scale_y_discrete(labels = c("A", "B", "C", "D", "E")) +
     theme(legend.position = "none")
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/parvorder_category_confusion_plots.pdf", width = 8.5, height = 3)
+pdf(here("Figure_folder/parvorder_category_confusion_plots.pdf"), width = 8.5, height = 3)
 plot_countfreq_cet_odont + plot_countfreq_cet_myst + plot_annotation(tag_levels = "a")
 dev.off()
 
@@ -638,7 +638,7 @@ sankey_cet <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = ne
 sankey_cet + coord_flip()
 
 #save out to figure folder
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/cet_sankey_plots.pdf", width = 4.25, height = 5, bg = "transparent")
+pdf(here("Figure_folder/Amelia_figures/cet_sankey_plots.pdf"), width = 4.25, height = 5, bg = "transparent")
 (sankey_cet + coord_flip())
 dev.off()
 
@@ -678,6 +678,6 @@ sankey_crep_cet <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node
 sankey_crep_cet + coord_flip()
 
 #save out to figure folder
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/cetacean_crep_flowchart.pdf", height = 3.75, width = 14.3)
+pdf(here("Figure_folder/cetacean_crep_flowchart.pdf"), height = 3.75, width = 14.3)
 sankey_crep_cet + coord_flip()
 dev.off()

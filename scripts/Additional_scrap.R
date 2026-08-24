@@ -2215,3 +2215,442 @@ tabulateCrep = function(x){
 
 crep_df <- diel_long%>% group_by(Species_name) %>% do(tabulated_crep = tabulateCrep(.)) %>% unnest()
 
+
+# # Function 5: ANOVA assumptions -----------------------------------------
+anovaAssumptions <- function(results_df = df_full, metric = results_df$likelihoods) {
+  # takes the dataframe of all model results, determines if it means the assumptions of ANOVA
+  # verify equality of variances
+  lav_test <- leveneTest(metric ~ factor(model),
+                         data = results_df,
+  )
+  #if the p value is less than 0.05 the residuals fit the assumption of equal variance
+  if(lav_test$`Pr(>F)`[1] < 0.05){
+    residual_variance <- "Equal-variance"  
+  } else{
+    #error variance not equal
+    residual_variance <- "Not-equal-variance"
+  }
+  
+  #run an ANOVA to check if the residuals are normally distributed
+  res_aov <- aov(metric ~ model,
+                 data = results_df
+  )
+  #check for normal distribution with the shapiro test
+  norm_test <- shapiro.test(res_aov$residuals)
+  if(norm_test$p.value < 0.05){
+    normality <- "normal"
+  } else{
+    normality <- "not-normal"
+  }
+  
+  model=lm(metric ~ results_df$model )
+  ANOVA=aov(model)
+  
+  # Tukey test to compare means between test groups
+  TUKEY <- TukeyHSD(x=ANOVA, 'results_df$model', conf.level=0.95)
+  
+  results_list <- c(residual_variance, normality, TUKEY)
+  if("Not-equal-variance" %in% results_list) warning("Variance of residuals not equal")
+  if("not-normal" %in% results_list) warning("Data is not normally distributed")
+  
+  return(results_list)
+}
+
+# Section 3: Load in and format data --------------------------------------
+# model_results1 <- readRDS(here("august_12__whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"))
+# model_results2 <- readRDS(here("august_14__whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"))
+# model_results1$ER_model <- c(model_results1$ER_model, model_results2$ER_model)
+# model_results1$SYM_model <- c(model_results1$SYM_model, model_results2$SYM_model)
+# model_results1$ARD_model <- c(model_results1$ARD_model, model_results2$ARD_model)
+# model_results1$bridge_only_model <- c(model_results1$bridge_only_model, model_results2$bridge_only_model)
+# model_results1$CONSYM_model <- c(model_results1$CONSYM_model, model_results2$CONSYM_model)
+# 
+# saveRDS(model_results1, here("august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"))
+
+# Mammal max clade cred likelihoods plotting function ---------------------
+
+max_clade_rates1 <- function(data = mam_model_result_list$Carnivora){
+  if(length(unique(data$data$max_crep)) == 4){
+    rates <- as.data.frame(data$solution)
+    colnames(rates) <- c("cathemeral", "crepuscular", "diurnal", "nocturnal")
+    row.names(rates) <- c("cathemeral", "crepuscular", "diurnal", "nocturnal")
+    rates$start_state <- row.names(rates)
+    rates <- pivot_longer(rates, cols = !start_state, names_to = "end_state", values_to = "rate")
+    rates <- as.data.frame(rates)
+    rates$solution <- paste(rates$start_state, "to", rates$end_state, sep = "-")
+    rates <- rates[!is.na(rates$rate), ]
+  }
+  if(length(unique(data$data$max_crep)) < 4){
+    stop("Less than 4 states in the model")
+  }
+  
+  return(rates)
+}
+
+max_clade_rates2 <- function(data = mam_model_result_list$Carnivora){
+  if(length(unique(data$data$Diel_Pattern)) == 4){
+    rates <- as.data.frame(data$solution)
+    colnames(rates) <- c("cathemeral", "crepuscular", "diurnal", "nocturnal")
+    row.names(rates) <- c("cathemeral", "crepuscular", "diurnal", "nocturnal")
+    rates$start_state <- row.names(rates)
+    rates <- pivot_longer(rates, cols = !start_state, names_to = "end_state", values_to = "rate")
+    rates <- as.data.frame(rates)
+    rates$solution <- paste(rates$start_state, "to", rates$end_state, sep = "-")
+    rates <- rates[!is.na(rates$rate), ]
+  }
+  if(length(unique(data$data$Diel_Pattern)) < 4){
+    stop("Less than 4 states in the model")
+  }
+  
+  return(rates)
+}
+
+
+# Section 6: Plot transition rates from 1k model results ----------------------
+
+filename <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_ruminants_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+#filename <- "august_artiodactyla_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
+
+#requires the filename, the number of states in the model and the number of Mk models 
+#returns a dataframe of the rates from each of the Mk models, for each of the 1k trees
+rates_df <- plot1kTransitionRates4state(readRDS(here(filename)), 5)
+
+model_selection <- "SYM"
+#colour by unique transition (solution)
+rate_colours_sol <- c( "#A024AE", "#DD8AE7","#EEC4F3", "#AD9680", "#D1B49B","#EECBAD",  "#FA4A05", "#FC8D62", "#FECCB9","#3C967E", "#66C2A5","#ABDECE")
+#colour by ending state
+rate_colours_end = c("#AD9680","#FA4A05","#3C967E","#A024AE", "#FA4A05","#3C967E", "#A024AE","#AD9680", "#3C967E","#A024AE","#AD9680", "#FA4A05")
+
+#if model selection is bridge only, adjust colours
+model_selection <- "Bridge_only"
+#colour by ending state
+rate_colours_end = c("#AD9680","#FA4A05","#3C967E","#A024AE", "#FA4A05","#3C967E", "#A024AE","#AD9680", "#A024AE","#AD9680")
+
+#filter by the model you're plotting
+rates_df1 <- rates_df %>% filter(model == model_selection) 
+
+#extract just the starting state
+rates_df1$start_state <- word(rates_df1$solution, 1)
+rates_df1$start_state <- paste(rates_df1$start_state, "to", sep = " ")
+rates_df1$end_state <- word(rates_df1$solution, 3)
+
+rates_df1$start_state <- factor(rates_df1$start_state, levels = c("Cathemeral to", "Diurnal to", "Crepuscular to", "Nocturnal to"))
+
+rates_plot <- 
+  ggplot(rates_df1, aes(x= end_state, y = log(rates), group = solution, fill = solution, colour = solution)) + 
+  geom_quasirandom(alpha = 0.3, width = 0.5, method = "quasirandom") + 
+  scale_color_manual(values = rate_colours_end) +
+  geom_violin(color = "black", scale = "width", alpha = 0.5) + theme_bw() +
+  scale_fill_manual(values = rate_colours_end) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.text.y = element_text(size =9), axis.title = element_text(size = 11), strip.background = element_rect(fill = "grey90"), legend.position = "none")  +
+  labs(x = "\n Transition", y = "Log(transition rate)") + 
+  stat_summary(fun=median, geom="point", size=3, colour = "black", alpha = 0.2) +
+  facet_wrap(~start_state, scales = "free_x", nrow = 1, ncol = 4)
+
+#pdf(paste0("C:/Users/ameli/Documents/R_projects/Amelia_figures/", substr(filename, start = 1, stop = 15), "_square_violin_rate_plot_", model_selection, ".pdf"), width = 7, height = 7)
+pdf(paste0("C:/Users/ameli/Documents/R_projects/Amelia_figures/", substr(filename, start = 1, stop = 15), "_violin_rate_plot_", model_selection, ".pdf"), width = 8.5, height = 3)
+rates_plot 
+dev.off()
+
+#calculate median and mean transition rates
+test <- rates_df1 %>% group_by(solution) %>% summarize(mean_rate = mean(rates), median_rate = median(rates))
+test$max_clade_rates <- max_clade_rates2(model_results$bridge_only_model) %>% pull(rate)
+
+#test %>% pivot_longer(!solution, names_to = "rate_type", values_to = "rates") %>% 
+#ggplot(., aes(x = rate_type, y = rates)) + geom_bar(position = "dodge") + theme_minimal()
+
+#scale these the same way...
+knitr::kable(test, format = "html", digits = 2, caption = filename) %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("transition_rate_table.html")
+webshot("transition_rate_table.html", file = paste0("C:/Users/ameli/Documents/R_projects/Amelia_figures/transition_rates_table_", filename, ".png"), vwidth = 992, vheight = 300)
+
+#create a column to identify reciprocal transitions
+rates_df1$paired_transitions <- paste(rates_df1$start_state, rates_df1$end_state, sep = " ")
+rates_df1$paired_transitions <- sapply(strsplit(rates_df1$paired_transitions, " "), function(x) paste(sort(x), collapse=""))
+rates_df1$paired_transitions <- factor(rates_df1$paired_transitions, levels = c("Cathemeral to", "Diurnal to", "Crepuscular to", "Nocturnal to"))
+
+
+#split violin plot
+ggplot(rates_df1, aes(x = paired_transitions, y = log(rates), fill = solution)) +
+  geom_split_violin(colour = "black", alpha = 0.5, width = 0.5) +
+  theme_bw() +
+  scale_fill_manual(values = rate_colours_sol) +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size =10), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"), legend.position = "none")  +
+  labs(x = "\n Transition", y = "Log(transition rate)") 
+
+#density plot
+density_plot <-
+  rates_df1 %>%
+  ggplot(., aes(y = log(rates), group = solution, fill = end_state)) +
+  geom_density(alpha = 0.4) + theme_void() +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size =10), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.position = "none")  +
+  scale_fill_manual(values = c( "#A024AE","#AD9680",  "#FA4A05","#3C967E")) 
+
+#kernel density estimates of rates
+pdf(paste0("C:/Users/ameli/Documents/R_projects/Amelia_figures/", filename, "rates_density_plots", model_selection, ".pdf"), width = 2, height = 22)
+density_plot  +
+  facet_wrap(~start_state + end_state, ncol = 1)
+dev.off()
+
+
+#fix colours
+rates_df1$colours <- c( "#A024AE", "#DD8AE7","#EEC4F3", "#AD9680", "#D1B49B","#EECBAD",  "#FA4A05", "#FC8D62","#3C967E", "#66C2A5")
+
+#save out each density plot
+for(i in 1:(length(unique(rates_df1$solution)))){
+  pdf(paste("C:/Users/ameli/Documents/R_projects/Amelia_figures/", model_selection, i, "rate_plot.pdf", sep = "_"), width = 3, height = 6)
+  print(rates_df1 %>% filter(solution == unique(rates_df1$solution)[i]) %>%
+          ggplot(., aes(y = log(rates), group = solution, fill = end_state)) +
+          geom_density(alpha = 0.4) + theme_void() +
+          theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size =10), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.position = "none")  +
+          scale_fill_manual(values = rates_df1$colours))
+  dev.off()
+}
+
+#combined ggplot and violin plot in column format
+rates_column_plot <-
+  rates_plot +
+  facet_wrap(~start_state, scales = "free_x", nrow = 4, ncol = 1)
+
+density_column_plot <- 
+  density_plot + 
+  facet_wrap(~start_state, nrow = 4, ncol = 1) +
+  labs(x = "\n Density", y = "") +
+  #for the ARD ruminant plot only either set scales to be free or limit x axis to 0.3, removes the large number of near zeros skewing the plot
+  #xlim(0, 0.4) + 
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size =10), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"), legend.position = "none") 
+
+pdf(paste0("C:/Users/ameli/Documents/R_projects/Amelia_figures/", substr(filename, start = 1, stop = 15), "_combined_rate_plot_column_trimmed_", model_selection, ".pdf"), width = 7, height = 10)
+ggarrange(rates_column_plot, density_column_plot)
+dev.off()
+
+
+#rates histogram
+ggplot(rates_df1, aes(x = log(rates), group = solution, fill = solution, colour = solution)) +
+  geom_histogram() +
+  facet_wrap(~solution) + 
+  theme_minimal()
+
+
+
+# Section: Proportion of transitions with non-zero rates (5.0 optional) --------
+#what proportion of trees finds a non-zero vs a near zero rate?
+test <- rates_df2 %>% filter(model %in% c("ARD", "Bridge_only")) %>%
+  mutate(rate_magnitude = case_when(log(rates) > -10 ~ "high rate",
+                                    log(rates) < -10 ~ "low rate")) %>% group_by(solution, rate_magnitude, model) %>%
+  summarize(totals = n()) 
+
+levels <- test %>% filter(rate_magnitude == "high rate") %>% arrange(desc(totals)) %>% pull(solution)
+#test$solution <- factor(test$solution, levels)
+ggplot(test, aes(x = solution, rate_magnitude, y = totals, fill = rate_magnitude)) + 
+  geom_col() + theme_minimal() + scale_fill_manual(values = c("skyblue", "slateblue")) +
+  theme(legend.position = "bottom") +
+  facet_wrap(~model, ncol = 1)
+
+# # Function 8: Lineages through time functions (customized from Max's code) --------------------------------------------
+
+### Write a function to extract ancestral likelihoods from a model
+returnAncestralStates <- function(phylo_model = model, phylo_tree = trpy_n, rate.cat = FALSE, recon = c("joint", "marg")) {
+  
+  # Create a data frame with trait values from reconstruction
+  
+  # Joint reconstruction gives a state, rather than the likelihood of each state (as in marginal)
+  # Easier to probably make joint look like marginal, to fit the rest of my functions
+  if (recon == "joint") {
+    tip_states <- data.frame(one_R1 = rep(NA, length(phylo_model$tip.states)), two_R1 = rep(NA, length(phylo_model$tip.states)), one_R2 = rep(NA, length(phylo_model$tip.states)), two_R2 = rep(NA, length(phylo_model$tip.states)))
+    tip_states$one_R1 <- ifelse(phylo_model$tip.states == 1, 1, 0)
+    tip_states$two_R1 <- ifelse(phylo_model$tip.states == 2, 1, 0)
+    tip_states$one_R2 <- ifelse(phylo_model$tip.states == 3, 1, 0)
+    tip_states$two_R2 <- ifelse(phylo_model$tip.states == 4, 1, 0)
+    states <- data.frame(one_R1 = rep(NA, length(phylo_model$states)), two_R1 = rep(NA, length(phylo_model$states)), one_R2 = rep(NA, length(phylo_model$states)), two_R2 = rep(NA, length(phylo_model$states)))
+    states$one_R1 <- ifelse(phylo_model$states == 1, 1, 0)
+    states$two_R1 <- ifelse(phylo_model$states == 2, 1, 0)
+    states$one_R2 <- ifelse(phylo_model$states == 3, 1, 0)
+    states$two_R2 <- ifelse(phylo_model$states == 4, 1, 0)
+    lik.anc <- rbind(tip_states, states)
+    row.names(lik.anc) <- c(phylo_tree$tip.label, c((Ntip(phylo_tree) + 1):(Ntip(phylo_tree) + Nnode(phylo_tree))))
+  }
+  
+  if (recon == "marg") {
+    # state 2 is nocturnal, state 1 is diurnal
+    lik.anc <- as.data.frame(rbind(phylo_model$tip.states, phylo_model$states))
+    row.names(lik.anc) <- c(row.names(lik.anc)[1:length(phylo_tree$tip.label)], (Ntip(phylo_tree) + 1):(Ntip(phylo_tree) + Nnode(phylo_tree)))
+  }
+  
+  if (phylo_model$rate.cat == 1) {
+    print("model has single rate category")
+    states <- unique(phylo_model$data[,2])
+    names(states) <- as.numeric(unique(phylo_model$data.legend[,2]))
+    rate_states <- sort(states)
+    states <- sort(states)
+  }
+  if (phylo_model$rate.cat == 2) {
+    print("model has 2 rate categories")
+    states <- unique(phylo_model$data[,2])
+    names(states) <- as.numeric(unique(phylo_model$data.legend[,2]))
+    states <- sort(states)
+    rate_states <- c(paste(states, "R1", sep = "_"), paste(states, "R2", sep = "_"))
+  }
+  if (phylo_model$rate.cat == 3) {
+    print("model has 3 rate categories")
+    states <- unique(phylo_model$data[,2])
+    names(states) <- as.numeric(unique(phylo_model$data.legend[,2]))
+    states <- sort(states)
+    rate_states <- c(paste(states, "R1", sep = "_"), paste(states, "R2", sep = "_"), paste(states, "R3", sep = "_"))
+  }
+  
+  colnames(lik.anc) <- rate_states
+  
+  ancestral_states <- list()
+  ancestral_states$lik.anc <- lik.anc
+  ancestral_states$node <- 1:(length(phylo_tree$tip.label) + phylo_tree$Nnode) # The only thing that isn't correct is the row.names on lik.anc, but I don't use those!
+  ancestral_states$states <- states
+  ancestral_states$rate_states <- rate_states
+  print(paste("returning ancestral states for", phylo_tree$Nnode, "internal nodes corresponding to", length(phylo_tree$tip.label), "tips in tree provided", sep = " "))
+  return(ancestral_states)
+}
+
+### Function to determine the number of transitions between states
+calculateStateTransitions <- function(ancestral_states = ancestral_states, phylo_tree = trpy_n, rate.cat = FALSE) {
+  
+  states <- ancestral_states$states
+  rate_states <- ancestral_states$rate_states
+  
+  # Determine the number of transitions or diurnal/nocturnal taxa by age
+  
+  # Return the probability of diurnal (or state 1)
+  if (length(ancestral_states$states) == length(ancestral_states$rate_states)){
+    ancestral_states$recon_states <- ancestral_states$lik.anc[,states[[1]]]
+  } else {
+    ancestral_states$recon_states <- as.numeric(rowSums(ancestral_states$lik.anc[,rate_states[grep(states[[1]], rate_states)]]))
+  }
+  
+  ## Added functionality to do this for rate categories
+  if (rate.cat) {
+    print("returning rate categories instead of states")
+    ancestral_states$recon_states <- as.numeric(rowSums(ancestral_states$lik.anc[,rate_states[grep("R1", rate_states)]]))
+  }
+  
+  # Determine ages of each node
+  node_heights <- nodeHeights(phylo_tree)
+  
+  ancestor <- round(ancestral_states$recon_states[Ntip(phylo_tree)+1])
+  
+  ancestral_states$node.age <- node_heights[match(ancestral_states$node, phylo_tree$edge[,2]),2] # This extracts all but one that is missing from phylo_tree$edge[,2], and generates an NA
+  ancestral_states$node.age[ancestral_states$node[is.na(ancestral_states$node.age)]] <- 0 # This is the root
+  # ancestral_states$node.age[is.na(ancestral_states$node.age)] <- 0
+  ancestral_states$node.age <- (ancestral_states$node.age - max(ancestral_states$node.age))*-1
+  
+  # ancestral_states <- ancestral_states[order(ancestral_states$Time),]
+  
+  # ID parental nodes and parental states
+  ancestral_states$parental.node <- unlist(lapply(ancestral_states$node, function(x) Ancestors(phylo_tree, x, type = "parent")))
+  ancestral_states$parent.diel <- unlist(lapply(ancestral_states$parental.node, function(x) ancestral_states$recon_states[match(x, ancestral_states$node)]))
+  # parent of the root is NA
+  ancestral_states$parent.diel[is.na(ancestral_states$parent.diel)] <- as.numeric(ancestor)
+  
+  ancestral_states$transition <- ifelse(ifelse(ancestral_states$parent.diel > 0.5, 1, 0) != ifelse(ancestral_states$recon_states > 0.5, 1, 0), 1, 0)
+  # For those with transitions, I can just ask what they are, and that's the switch type!
+  ancestral_states$trans.ND <- ifelse(ancestral_states$transition == 1, ifelse(ancestral_states$recon_states > 0.5, 1, 0),0)
+  ancestral_states$trans.DN <- ifelse(ancestral_states$transition == 1, ifelse(ancestral_states$recon_states < 0.5, 1, 0),0)
+  # ancestral_states$transition[is.na(ancestral_states$transition)] <- 0
+  
+  print(paste("Identified", table(ancestral_states$transition)[2], "transitions between", ancestral_states$states[1], "and", ancestral_states$states[2], sep = " "))
+  return(ancestral_states)
+}
+
+### Function to calculate transition history on tree for the state
+calculateLinTransHist2 <- function(ancestral_states = ancestral_states, phylo_tree = trpy_n) {
+  
+  # ancestors <- lapply(c(1:length(phylo_tree$tip.label)), function(x) Ancestors(phylo_tree, x, type = "all"))
+  # ancestors <- lapply(seq_along(ancestors), function(x) append(c(1:length(phylo_tree$tip.label))[[x]], ancestors[[x]]))
+  ## The above only did it for tips, but below does it for all internal nodes as well
+  ## 
+  ancestors <- lapply(ancestral_states$node, function(x) Ancestors(phylo_tree, x, type = "all"))
+  ancestors <- lapply(seq_along(ancestors), function(x) append(ancestral_states$node[[x]], ancestors[[x]]))
+  print("calculating ancestral states for all nodes")
+  recon_states <- ifelse(ancestral_states$recon_states > 0.5, 1, 0)
+  ancestors.diel <- lapply(ancestors, function(x) lapply(x, function(y) recon_states[match(y, ancestral_states$node)]))
+  
+  print("identifying switch types")
+  # This works, can I simplify it so it works on a vector?
+  switch.type <- unlist(lapply(ancestors.diel, function(x) {
+    df <- data.frame(test = unlist(x))
+    df <- df[with(df, c(test[-1]!= test[-nrow(df)], TRUE)),]
+    return(paste(df, collapse = ""))
+  }))
+  
+  ancestral_states$switch.type <- as.character(switch.type)
+  
+  print("Identified the following switch types")
+  print(table(switch.type))
+  
+  return(ancestral_states)
+}
+
+
+
+### Function to calculate the cummulative sums (of switches and switch types)
+returnCumSums <- function(ancestral_states = ancestral_states, phylo_tree = trpy_n, use.height = TRUE) {
+  # This is all nodes (for transitions only)
+  node_order <- order(ancestral_states$node.age, decreasing = T) # Oldest node first (root)
+  
+  ancestral_states$transition_cumsum <- cumsum(ancestral_states$transition[node_order])
+  ancestral_states$trans.DN_cumsum <- cumsum(ancestral_states$trans.DN[node_order])
+  ancestral_states$trans.ND_cumsum <- cumsum(ancestral_states$trans.ND[node_order])
+  
+  # ## This uses switch types of both internal nodes and tips
+  # df <- list()
+  # for (i in unique(ancestral_states$switch.type)) {
+  #   df[[i]] <- (ifelse(ancestral_states$switch.type == i, 1, 0))
+  # }
+  # df <- Reduce(cbind, df)
+  # colnames(df) <- unique(ancestral_states$switch.type)
+  # df <- as.data.frame(df)
+  # df$node.age <- ancestral_states$node.age
+  
+  ## This uses only internal nodes
+  df <- list()
+  for (i in unique(ancestral_states$switch.type)) {
+    df[[i]] <- (ifelse(ancestral_states$switch.type == i, 1, 0))[(Ntip(phylo_tree)+1):length(ancestral_states$switch.type)]
+  }
+  df <- Reduce(cbind, df)
+  colnames(df) <- unique(ancestral_states$switch.type)
+  df <- as.data.frame(df)
+  df$node.age <- ancestral_states$node.age[(Ntip(phylo_tree)+1):length(ancestral_states$switch.type)]
+  
+  cumsums <- df
+  cumsums <- cumsums[order(cumsums$node.age, decreasing = T),]
+  
+  for (i in 1:(ncol(cumsums)-1)) {
+    cumsums[,i] <- cumsum(cumsums[,i])
+  }
+  
+  
+  ## OK, for this graph, I want to index the first half of node_heights!
+  
+  # First column from 'edge' is the higher node, second is lower
+  # both columns from 'node_heights' should match by the index ('edge')
+  # If I find the tip in edge[,2], but pull node_heights[,1], I get the age of the node connected to the tip (the branch point of the tip)
+  
+  # node_heights <- nodeHeights(phylo_tree)
+  # node.age2 <- node_heights[match(c(1:length(phylo_tree$tip.label)), phylo_tree$edge[,2]),1] # This finds the position of each node # in the 2nd column of 'edge', and returns the first column of 'edge', which is the age of the split
+  # 
+  # node.age2[is.na(node.age2)] <- 0
+  # node.age2 <- (node.age2 - max(node.age2))*-1
+  # 
+  # cumsums <- data.frame(row.names = phylo_tree$tip.label[order(node.age2, decreasing = T)])
+  # cumsums$node.age <- node.age2[order(node.age2, decreasing = T)]
+  # # cumsums$node.age <- ancestral_states$node.age[node_order_2]
+  # cumsums$Lineage_Cumsum <- cumsum(rep(1, length(phylo_tree$tip.label)))
+  # 
+  # for (i in unique(ancestral_states$switch.type)) {
+  #   cumsums[,i] <- cumsum(ifelse(ancestral_states$switch.type[order(node.age2, decreasing = T)] == i, 1, 0))
+  # }
+  
+  ancestral_states$cumsums <- cumsums
+  return(ancestral_states)
+}
+
+
+

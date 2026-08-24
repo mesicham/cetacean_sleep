@@ -20,7 +20,7 @@ library(phangorn)
 setwd(here())
 
 source("scripts/fish_sleep_functions.R")
-source("scripts/Amelia_functions.R")
+source("scripts/Cetacean_sleep_functions.R")
 
 # Section 1: Arguments ----------------------------------------------------
 args <- commandArgs(trailingOnly = TRUE)

@@ -386,7 +386,7 @@ confusion_plot_rum <-
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.title = element_text(size = 11))
 
 #save out combined plots
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_confusion_matrix.pdf", width = 4.3, height = 4.3)
+pdf(here("Figure_folder/combined_confusion_matrix.pdf"), width = 4.3, height = 4.3)
 (confusion_plot_cet + labs(x = "", y = "")) /
   (confusion_plot_rum + theme(axis.title = element_blank()))
 dev.off()
@@ -476,10 +476,9 @@ plot_countfreq_rum <- table2[c(1:5, 7:10, 13:15, 19:20, 25), ] %>%
 plot_countfreq_rum
 
 #ave out the combined confusion plots for cetaceans and terrestrial artiodactyls
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/combined_category_confusion_plots.pdf", width = 8.5, height = 3)
+pdf(here("Figure_folder/combined_category_confusion_plots.pdf"), width = 8.5, height = 3)
 plot_countfreq_cet + plot_countfreq_rum
 dev.off()
-
 
 # Section 7: Day-night preference sankey pipeline ------------------------------------------
 
@@ -511,7 +510,7 @@ sankey_rum <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = ne
 sankey_rum + coord_flip()
 
 #save out to figure folder
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/rum_sankey_plots.pdf", width =10.25, height = 5, bg = "transparent")
+pdf(here("Figure_folder/rum_sankey_plots.pdf"), width =10.25, height = 5, bg = "transparent")
 (sankey_rum + coord_flip())
 dev.off()
 
@@ -548,7 +547,7 @@ sankey_crep_rum <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node
 sankey_crep_rum + coord_flip()  
 
 #save out to figure folder
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/ruminant_crep_flowchart.pdf", height = 3.75, width = 4.3)
+pdf(here("Figure_folder/ruminant_crep_flowchart.pdf"), height = 3.75, width = 4.3)
 sankey_crep_rum + coord_flip()
 dev.off()
 
@@ -585,7 +584,7 @@ total_sources <- sources_df %>% group_by(Clade, Freq) %>% summarize(Freq = Freq,
   theme(panel.grid = element_blank(), legend.position = "inside", legend.position.inside = c(0.85, 0.8))
 total_sources
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/source_count_barchart.pdf", height = 2.5, width = 8)
+pdf(here("Figure_folder/source_count_barchart.pdf"), height = 2.5, width = 8)
 number_sources + total_sources 
 dev.off()
 
@@ -648,5 +647,5 @@ artio_full <- artio_full %>% mutate(References = gsub("c(", "", References, fixe
   mutate(References = gsub(")", "", References, fixed=TRUE))
 
 #save to figures folder
-write.csv(artio_full, "C:/Users/ameli/Documents/R_projects/Amelia_figures/artiodactyla_with_sources.csv", row.names = FALSE)
-write.csv(artio_sources, "C:/Users/ameli/Documents/R_projects/Amelia_figures/artiodactyla_references.csv", row.names = FALSE)
+write.csv(artio_full, here("Figure_folder/artiodactyla_with_sources.csv"), row.names = FALSE)
+write.csv(artio_sources, here("Figure_folder/artiodactyla_references.csv"), row.names = FALSE)

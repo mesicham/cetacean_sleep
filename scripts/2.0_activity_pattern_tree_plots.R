@@ -1,7 +1,7 @@
 setwd(here())
 
 source("scripts/fish_sleep_functions.R")
-source("scripts/Amelia_functions.R")
+source("scripts/Cetacean_sleep_functions.R")
 
 # Section 1: Preliminary plots -----------------------
 mam.tree <- readRDS(here("maxCladeCred_mammal_tree.rds"))
@@ -77,7 +77,7 @@ diel.plot <- diel.plot +
 
 diel.plot 
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/whippo_with_families.pdf", width = 7, height = 6.3, bg = "transparent")
+pdf(here("Figure_folder/whippo_with_families.pdf"), width = 7, height = 6.3, bg = "transparent")
 diel.plot
 dev.off()
 
@@ -115,7 +115,7 @@ diel.plot <- diel.plot +
   geom_tile(data = diel.plot$data[1:length(trpy_n$tip.label),] %>% filter(Family == "Antilocapridae"), aes(x=x+2.3, y=y), inherit.aes = FALSE, fill = "grey50", width = 1.0, height = 0.6) 
 diel.plot 
 
-# pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/ruminantia_with_families.pdf", width = 8, height = 7, bg = "transparent")
+# pdf(here("Figure_folder/ruminantia_with_families.pdf"), width = 8, height = 7, bg = "transparent")
 # diel.plot
 # dev.off()
 
@@ -149,7 +149,7 @@ diel.plot <- diel.plot + geom_tile(data = diel.plot$data[1:length(trpy_n$tip.lab
   theme(legend.position = "inside", legend.position.inside = c(0.5, 0.37), panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent'))
 diel.plot
 
-# pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/artio_with_suborders.pdf", width = 8.5, height = 8.5, bg = "transparent")
+# pdf(here("Figure_folder/artio_with_suborders.pdf"), width = 8.5, height = 8.5, bg = "transparent")
 # diel.plot
 # dev.off()
 
@@ -182,7 +182,7 @@ diel.plot <- diel.plot + geom_tile(data = diel.plot$data[1:length(trpy_n$tip.lab
   theme(legend.position = "right", legend.position.inside = c(0.5, 0.37), panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), legend.background = element_rect(fill='transparent'))
 diel.plot
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/artio_with_families.pdf", width = 8.5, height = 8.5, bg = "transparent")
+pdf(here("Figure_folder/artio_with_families.pdf"), width = 8.5, height = 8.5, bg = "transparent")
 diel.plot
 dev.off()
 
@@ -220,7 +220,7 @@ diel.plot <- diel.plot + geom_tile(data = diel.plot$data[1:length(trpy_n$tip.lab
   
 diel.plot
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/artio_collapsed.pdf", width = 4.8, height = 4.8, bg = "transparent")
+pdf(here("Figure_folder/artio_collapsed.pdf"), width = 4.8, height = 4.8, bg = "transparent")
 diel.plot
 dev.off()
 
@@ -244,11 +244,11 @@ suborders_plot <-
   theme_classic() +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text = element_text(size = 9))
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/barplot_percentages.pdf", width = 4.25, height = 2, bg = "transparent")
+pdf(here("Figure_folder/barplot_percentages.pdf"), width = 4.25, height = 2, bg = "transparent")
 suborders_plot
 dev.off()
 
-pdf("C:/Users/ameli/Documents/R_projects/Amelia_figures/parvorder_barplot_percentages.pdf", width = 2, height = 2, bg = "transparent")
+pdf(here("Figure_folder/parvorder_barplot_percentages.pdf"), width = 2, height = 2, bg = "transparent")
 artio_full %>% filter(Parvorder %in% c("Odontoceti", "Mysticeti")) %>%
   ggplot(., aes(x = Parvorder, fill = max_crep)) + geom_bar(position = "fill", width = 0.6) +
   scale_fill_manual(values = custom.colours) +

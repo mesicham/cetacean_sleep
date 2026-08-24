@@ -1,30 +1,8 @@
 source("scripts/fish_sleep_functions.R")
+source("scripts/cetacean_sleep_functions.R")
 mam.tree <- readRDS(here("maxCladeCred_mammal_tree.rds"))
 
-
-# Function to create trait vector for phylANOVA -------------------------
-
-calculatePhylANOVA <- function(trait.data = trait.data, continuous_trait = "Orbit_ratio"){
-  trait.data <- trait.data[trait.data$tips %in% mam.tree$tip.label,]
-  trpy_n <- keep.tip(mam.tree, tip = trait.data$tips)
-  sps_order <- as.data.frame(trpy_n$tip.label)
-  colnames(sps_order) <- "tips"
-  sps_order$id <- 1:nrow(sps_order)
-  test <- merge(trait.data, sps_order, by = "tips")
-  trait.vector <- test[, c(continuous_trait)]
-  names(trait.vector) <- test$tips
-  #y trait is the continuous (response) variable 
-  trait.y <- test[, c(continuous_trait)]
-  names(trait.y) <- test$tips
-  #x trait is the categorical variable 
-  trait.x <- test$max_crep
-  names(trait.x) <- test$tips
-  phylANOVA <- phytools::phylANOVA(trpy_n, trait.x, trait.y, nsim=1000, posthoc=TRUE, p.adj="holm")
-  return(phylANOVA)
-}
-
-
-# Plot formatting -------------------------------------
+# Section 1.0: Plot formatting -------------------------------------
 
 trait.data <- read.csv(here("cetacean_ecomorphology_dataset.csv"))
 #filter for species with activity pattern data
@@ -46,7 +24,7 @@ boxplot_format <- list(geom_boxplot(aes(fill = max_crep), alpha = 0.5, outlier.s
                        geom_jitter(aes(fill = max_crep), size = 3, width = 0.1, height = 0, colour = "black", pch = 21, alpha = 0.8), boxplot_theme,
                        scale_x_discrete(labels = c("cathemeral" = "Cathemeral", "crepuscular" = "Crepuscular", "diurnal" = "Diurnal", "nocturnal" = "Nocturnal")))
 
-# Cetacean orbit ratio ----------------------------------------------------
+# Section 2.0: Cetacean orbit ratio ----------------------------------------------------
 
 trait.data.1 <- trait.data[!is.na(trait.data$Orbit_ratio),]
 
@@ -64,11 +42,7 @@ cet_orbit_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = Orbit_ratio)) +
 
 cet_orbit_boxplot
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Orbit_ratio_boxplot_cetaceans.pdf", width = 7.5, height = 7)
-# boxplot
-# dev.off()
-
-# Cetacean mean latitude --------------------------------------------------
+# Section 3.0: Cetacean mean latitude --------------------------------------------------
 
 #family.colours <- c("dodgerblue",  "cyan","darkgreen", "springgreen", "darkolivegreen1", "gold", "orange", "firebrick2", "brown", "orchid1", "darkorchid")
 
@@ -86,11 +60,7 @@ cet_lat_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = mean_lat)) +
   labs(x = "Temporal activity pattern", y = "Mean latitude range") + 
   annotate("text", x = 1.4, y = 100, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Mean_latitude_boxplot_cetaceans.pdf", width = 7, height = 7.5)
-# boxplot
-# dev.off()
-
-# Cetacean max latitude ---------------------------------------------------
+# Section 4.0: Cetacean max latitude ---------------------------------------------------
 #family.colours <- c("dodgerblue",  "cyan","darkgreen", "springgreen", "darkolivegreen1", "gold", "orange", "firebrick2", "brown", "orchid1", "darkorchid")
 
 #select the variable we're looking at
@@ -107,11 +77,7 @@ cet_maxlat_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = max_lat)) +
   labs(x = "Temporal activity pattern", y = "Maximum latitude range") + 
   annotate("text", x = 1.4, y = 100, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Max_latitude_boxplot_cetaceans.pdf", width = 7, height = 7.5)
-# cet_max_latboxplot
-# dev.off()
-
-# Cetacean body mass ------------------------------------------------------
+# Section 5.0: Cetacean body mass ------------------------------------------------------
 
 trait.data.1 <- trait.data[!is.na(trait.data$Body_mass_kg),]
 
@@ -126,11 +92,7 @@ cet_mass_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = log(Body_mass_kg)
   labs(x = "Temporal activity pattern", y = "Log (body mass (kg))") + 
   annotate("text", x = 1.4, y = 13, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Body_mass_boxplots_anova_cetaceans.pdf", width = 8, height = 7)
-# cet_mass_boxplot
-# dev.off()
-
-# Cetacean dive depth -----------------------------------------------------
+# Section 6.0: Cetacean dive depth -----------------------------------------------------
 #family.colours <- c("grey", "black","dodgerblue", "cyan", "darkgreen","darkolivegreen1", "orange", "firebrick2", "orchid1", "darkorchid")
 
 trait.data.1 <- trait.data[!is.na(trait.data$Dive_depth_m),]
@@ -145,11 +107,7 @@ cet_dive_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = log(Dive_depth_m)
 
 cet_dive_boxplot
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Dive_depth_boxplot_cetaceans.pdf", width = 7.5, height = 7)
-# boxplot
-# dev.off()
-
-# Ruminant orbit size -----------------------------------------------------
+# Section 7.0: Ruminant orbit size -----------------------------------------------------
 
 #family.colours <- c("dodgerblue", "springgreen",  "gold", "darkorchid")
 
@@ -185,11 +143,7 @@ rum_orbit_boxplot <- ggplot(trait.data.art, aes(x = max_crep, y = Orbit_ratio)) 
 
 rum_orbit_boxplot
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Orbit_ratio_boxplot_ruminants.pdf", width = 7, height = 7.5)
-# rum_orbit_boxplot
-# dev.off()
-
-# Ruminant mean latitude -------------------------------------------------------
+# Section 8.0: Ruminant mean latitude -------------------------------------------------------
 #family.colours <- c("black","dodgerblue", "springgreen",  "gold", "firebrick2", "darkorchid")
 
 trait.data.art <- read.csv(here("artiodactyla_ecomorphology_dataset.csv"))
@@ -219,12 +173,7 @@ rum_lat_boxplot <- ggplot(trait.data.art, aes(x = max_crep, y = mean_lat)) +
 
 rum_lat_boxplot
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/mean_latitude_boxplots_ruminant.pdf", width = 7, height = 7.5)
-# boxplot
-# dev.off()
-
-
-# Ruminant max latitude ---------------------------------------------------
+# Section 9.0: Ruminant max latitude ---------------------------------------------------
 #family.colours <- c("black","dodgerblue", "springgreen",  "gold", "firebrick2", "darkorchid")
 
 trait.data.art <- read.csv(here("artiodactyla_ecomorphology_dataset.csv"))
@@ -254,12 +203,7 @@ rum_max_lat_boxplot <- ggplot(trait.data.art, aes(x = max_crep, y = max_lat)) +
 
 rum_max_lat_boxplot
 
-# pdf("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/max_latitude_boxplots_ruminant.pdf", width = 7.5, height = 7)
-# rum_max_lat_boxplot
-# dev.off()
-
-
-# Ruminant body mass ------------------------------------------------------
+# Section 10.0: Ruminant body mass ------------------------------------------------------
 #family.colours <- c("black","dodgerblue", "springgreen",  "gold", "firebrick2", "darkorchid")
 
 trait.data.art <- read.csv(here("artiodactyla_ecomorphology_dataset.csv"))
@@ -276,25 +220,10 @@ rum_mass_boxplot <- ggplot(trait.data.art, aes(x = max_crep, y = log(AdultBodyMa
   labs(x = "Temporal activity pattern", y = "Log (body mass (kg))") + 
   annotate("text", x = 1.4, y = 7.5, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
 
-# pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/Body_mass_boxplots_anova_ruminants.pdf"), width = 8, height = 7)
-# rum_mass_boxplot
-# dev.off()
+# Section 11.0: Arranging and saving out the plots --------------------------------------
 
-
-
-# Arranging and saving out the plots --------------------------------------
-
-boxplots <- (rum_orbit_boxplot + cet_orbit_boxplot) /
-  (rum_lat_boxplot + cet_lat_boxplot) /
-  (plot_spacer() + cet_dive_boxplot) + plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(size = 14))
-
-boxplots
-
-#boxplots <- (rum_orbit_boxplot/ rum_lat_boxplot/plot_spacer()) | (cet_orbit_boxplot/cet_lat_boxplot/cet_dive_boxplot)
-boxplots <- (rum_orbit_boxplot/ rum_lat_boxplot) | (cet_orbit_boxplot/cet_lat_boxplot/cet_dive_boxplot) 
-
-# pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/ecomorphological_boxplots.pdf"), width = 8.5, height = 7, bg = "transparent")
-# boxplots #+ plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(size = 14))
+# pdf(here("Figure_folder/ecomorphological_boxplots.pdf"), width = 8.5, height = 7, bg = "transparent")
+#(rum_orbit_boxplot/ rum_lat_boxplot) | (cet_orbit_boxplot/cet_lat_boxplot/cet_dive_boxplot) 
 # dev.off()
 
 #alternative plot arrangement
@@ -306,14 +235,12 @@ cet_boxplots <- (cet_orbit_boxplot + expand_limits(y = 45) + theme(axis.title.x 
   (cet_lat_boxplot + expand_limits(y = 108) + theme(axis.title.x = element_text(colour = "white"))) / 
   (cet_dive_boxplot + expand_limits(y = 10)) 
 cet_boxplots
-#plot_annotation(tag_levels = 'a') + theme(plot.tag = element_text(size = 14), axis.title.x = element_blank(), axis.text.x = element_blank())
 
-
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/rum_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
+pdf(here("Figure_folder/rum_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
 rum_boxplots
 dev.off()
 
-pdf(paste0("C:/Users/ameli/OneDrive/Documents/R_projects/Amelia_figures/cet_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
+pdf(here("Figure_folder/cet_ecomorphological_boxplots.pdf"), width = 4.25, height = 6, bg = "transparent")
 cet_boxplots
 dev.off()
 
