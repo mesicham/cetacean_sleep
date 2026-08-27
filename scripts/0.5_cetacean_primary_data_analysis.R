@@ -1,11 +1,8 @@
 # Section 0: Packages -----------------------------------------------------
 library(ape) 
-library(corHMM)
 library(phangorn)
 library(stringr)
 library(here)
-library(rotl)
-library(ggtree)
 library(gsheet)
 library(dplyr)
 library(phytools)
@@ -15,9 +12,6 @@ library(readxl)
 library(tidyr)
 library(lubridate)
 library(suncalc)
-#install.packages("deeptime")
-#library(deeptime)
-#update.packages("ggplot2")
 library(ggplot2)
 setwd(here())
 #to find sunset sunrise times
@@ -36,7 +30,7 @@ source("scripts/fish_sleep_functions.R")
 # Section 1: Hyperoodon planifrons data ---------------------------------
 
 #data from https://doi.org/10.1111/mms.12216 
-hyper <- read_xlsx("C:/Users/ameli/OneDrive/Documents/cetacean_echo_data/Trickey_2015_Hyperoodon_planifrons.xlsx")
+hyper <- read_xlsx(here("Artiodactyla_activity_data/Trickey_2015_Hyperoodon_planifrons.xlsx"))
 
 hyper <- hyper %>% separate("Encounter ID Date/time (GMT) Latitude Longitude Signal count", into = c("Encounter_ID", "Date", "Month", "Year", "Time", "Latitude", "Longitude", "Signal_count"), sep = " ")
 hyper <- hyper %>% separate("Time", into = c("Start_time", "End_time"), sep = "–")
@@ -90,48 +84,47 @@ hyper <- cbind(hyper, sun_times) %>% select("Date", "Month", "Year", "Start_time
 #study took place in the anarctic (South Orkney Islands, South Shetland Islands, and Antarctic Peninsula)
 
 #with suncalc times
+hyper_plot1 <- 
 ggplot(hyper, aes(y = Signal_count, x = Start_time)) + 
-  theme_minimal() +
+  theme_classic() +
   annotate(geom = "rect", xmin = mean(hyper$dawn_start), xmax = mean(hyper$dawn_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(hyper$dusk_start), xmax = mean(hyper$dusk_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(hyper$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(hyper$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_point() + 
-  scale_x_continuous(limits = c(0, 24), breaks = c(0:24)) + 
+  #geom_point() + 
+  scale_x_continuous(breaks = c(0,5,10,15,20,25)) + 
+  labs(x = "Hour", y = "Signal count") +
   geom_smooth(method = "loess", formula = "y~x", colour = "black") +
-  geom_rug()
-
-
-hyper1 <- hyper
+  ggtitle("Hyperoodon planifrons") + theme(plot.title = element_text(size = 11))
 
 ###new hyperoodon data from Barlow et al, 2021
 #https://doi.org/10.1016/j.dsr2.2021.104973
 
-hyper <- read_xlsx("C:/Users/ameli/OneDrive/Documents/cetacean_echo_data/Barlow_2021_Hyperoodon_planifrons.xlsx")
-hyper$`Event sequential number Event ID Start date/time (UTC) Event type Number of echolocation signals South latitude West longitude` <- str_replace(hyper$`Event sequential number Event ID Start date/time (UTC) Event type Number of echolocation signals South latitude West longitude`, pattern = "Southern bottlenose whale", replacement = "Southern_bottlenose_whale")
+hyper2 <- read_xlsx(here("Artiodactyla_activity_data/Barlow_2021_Hyperoodon_planifrons.xlsx"))
+hyper2$`Event sequential number Event ID Start date/time (UTC) Event type Number of echolocation signals South latitude West longitude` <- str_replace(hyper2$`Event sequential number Event ID Start date/time (UTC) Event type Number of echolocation signals South latitude West longitude`, pattern = "Southern bottlenose whale", replacement = "Southern_bottlenose_whale")
 
-hyper <- hyper %>% separate("Event sequential number Event ID Start date/time (UTC) Event type Number of echolocation signals South latitude West longitude", into = c("Event", "sequential_number", "Event_ID", "Start_date_time", "Event_type", "Signal_count", "South_latitude", "West_longitude"), sep = " ")
+hyper2 <- hyper2 %>% separate("Event sequential number Event ID Start date/time (UTC) Event type Number of echolocation signals South latitude West longitude", into = c("Event", "sequential_number", "Event_ID", "Start_date_time", "Event_type", "Signal_count", "South_latitude", "West_longitude"), sep = " ")
 
 #remove anything that isn't a southern bottlenose whale 
-hyper <- filter(hyper, Event_type == "Southern_bottlenose_whale")
-hyper$Start_date_time <- str_replace(hyper$Start_date_time, pattern = ":", replacement = "")
-hyper$Signal_count <- as.numeric(hyper$Signal_count)
+hyper2 <- filter(hyper2, Event_type == "Southern_bottlenose_whale")
+hyper2$Start_date_time <- str_replace(hyper2$Start_date_time, pattern = ":", replacement = "")
+hyper2$Signal_count <- as.numeric(hyper2$Signal_count)
 
 #since we are south and west, transform the coordinates to be negative 
-hyper <- mutate(hyper, lat = as.numeric(South_latitude)*(-1))
-hyper <- mutate(hyper, lon = as.numeric(West_longitude)*(-1))
+hyper2 <- mutate(hyper2, lat = as.numeric(South_latitude)*(-1))
+hyper2 <- mutate(hyper2, lon = as.numeric(West_longitude)*(-1))
 
 #make columns for the dates so it can be interpreted by the sunriset function
-hyper <- hyper %>% separate(Event_ID, into = c("Month", "Day", "Year"), sep = "/")
-hyper$date <- as.Date(as.POSIXct(paste0(hyper$Year, "-", hyper$Month, "-", hyper$Day)))
+hyper2 <- hyper2 %>% separate(Event_ID, into = c("Month", "Day", "Year"), sep = "/")
+hyper2$date <- as.Date(as.POSIXct(paste0(hyper2$Year, "-", hyper2$Month, "-", hyper2$Day)))
      
-hyper$Start_date_time <- as.numeric(hyper$Start_date_time)      
-hyper <- hyper %>% mutate(Start_time = Start_date_time/100) %>% 
+hyper2$Start_date_time <- as.numeric(hyper2$Start_date_time)      
+hyper2 <- hyper2 %>% mutate(Start_time = Start_date_time/100) %>% 
   mutate(Start_hour = as.integer(Start_time), Start_min = ((Start_time - as.integer(Start_time)) * 100/60)) %>%
   mutate(Start_time = Start_hour + Start_min)
 
 #function to determine timezone from coordinates
-hyper$timezone <- tz_lookup_coords(hyper$lat, hyper$lon, method = "accurate")
+hyper2$timezone <- tz_lookup_coords(hyper2$lat, hyper2$lon, method = "accurate")
 
 #test run
 #off the Falkland islands (-55, -47) on January 1 sunrise was at 4:33am and sunset at 9:48pm (21:48)
@@ -145,7 +138,7 @@ getSunlightTimes(date = as.Date(parse_date_time("2020-01-01", orders = "ymd")),
 #use sunset start as the start of dusk and nautical dusk as the end (encompasses dusk) 
 
 #using timezones calculated above gives an invalid tz error so input manually
-sun_times <- getSunlightTimes(data = hyper[, c("date", "lon", "lat")], 
+sun_times <- getSunlightTimes(data = hyper2[, c("date", "lon", "lat")], 
                               keep = c("sunriseEnd", "sunsetStart", "nauticalDawn", "nauticalDusk"),
                               tz =  "Atlantic/South_Georgia")
 
@@ -161,50 +154,55 @@ sun_times$dusk_end[is.na(sun_times$dusk_end)] <- 1
 sun_times$dusk_end[as.integer(sun_times$dusk_end) == 0] <- sun_times$dusk_end[as.integer(sun_times$dusk_end) == 0] + 24
 sun_times$dusk_end[sun_times$dusk_end == 1] <- NA
 
-hyper <- cbind(hyper, sun_times) %>% select(c(Signal_count, lat, lon, date, Start_time, timezone, dusk_start, dusk_end, dawn_start, dawn_end))
+hyper2 <- cbind(hyper2, sun_times) %>% select(c(Signal_count, lat, lon, date, Start_time, timezone, dusk_start, dusk_end, dawn_start, dawn_end))
 
-ggplot(hyper, aes(y = Signal_count, x = Start_time)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(hyper$dawn_start, na.rm = TRUE), xmax = mean(hyper$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(hyper$dusk_start, na.rm = TRUE), xmax = mean(hyper$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(hyper$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(hyper$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_point() + 
-  scale_x_continuous(breaks = c(0:24)) +
-  geom_smooth(method = "loess", formula = "y~x", colour = "black")+
-  geom_rug()
-
+hyper_plot2 <- 
+ggplot(hyper2, aes(y = Signal_count, x = Start_time)) + 
+  theme_classic() +
+  annotate(geom = "rect", xmin = mean(hyper2$dawn_start, na.rm = TRUE), xmax = mean(hyper2$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = mean(hyper2$dusk_start, na.rm = TRUE), xmax = mean(hyper2$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = 0, xmax = mean(hyper2$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
+  annotate(geom = "rect", xmin = mean(hyper2$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
+  scale_x_continuous(breaks = c(0, 5, 10, 20, 25)) +
+  labs(x = "Hour", y = "Signal count") +
+  geom_smooth(method = "loess", formula = "y~x", colour = "black") +
+  ggtitle("Hyperoodon planifrons") + theme(plot.title = element_text(size = 11))
 
 #study took place in  Falkland Islands to the South Sandwich Islands and South Georgia from December 30, 2019 to January 29, 2020 (Leg 1)
 #only one detection occurred on the second leg of the trip from King George Island to Puerto Williams, Chile via the Antarctic Peninsula from February 11 to 27, 2020 (Leg 2)
 
-hyper_merged <- rbind(hyper[, c("Start_time", "Signal_count", "dusk_start", "dusk_end", "dawn_start", "dawn_end")], hyper1[, c("Start_time", "Signal_count", "dusk_start", "dusk_end", "dawn_start", "dawn_end")])
-ggplot(hyper_merged, aes(y = Signal_count, x = Start_time)) + 
-  theme_minimal() +
+hyper_merged <- rbind(hyper[, c("Start_time", "Signal_count", "dusk_start", "dusk_end", "dawn_start", "dawn_end")], hyper2[, c("Start_time", "Signal_count", "dusk_start", "dusk_end", "dawn_start", "dawn_end")])
+
+hyper_plot3 <-
+  ggplot(hyper_merged, aes(y = Signal_count, x = Start_time)) + 
+  theme_classic() +
   annotate(geom = "rect", xmin = mean(hyper_merged$dawn_start, na.rm = TRUE), xmax = mean(hyper_merged$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(hyper_merged$dusk_start, na.rm = TRUE), xmax = mean(hyper_merged$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(hyper_merged$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(hyper_merged$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_point() +
-  scale_x_continuous(breaks = c(0:24)) + 
-  geom_smooth(method = "loess", formula = "y~x", colour = "black")+
-  geom_rug()
+  scale_x_continuous(breaks = c(0, 5, 10, 20, 25)) +
+  labs(x = "Hour", y = "Signal count") + #geom_rug() + 
+  geom_smooth(method = "loess", formula = "y~x", colour = "black") +
+  ggtitle("Hyperoodon planifrons")
 
+# pdf(here("Figure_folder/Hyperoodon_activity_pattern.pdf"), width = 5, height = 3)
+# hyper_plot3
+# dev.off()
 
 # Section 2: vaquita ---------------------------------------------------------
 #study: https://iucn-csg.org/wp-content/uploads/2023/06/Vaquita-Survey-2023-Main-Report.pdf
 #data from appendix: https://iucn-csg.org/wp-content/uploads/2023/06/Vaquita-Survey-2023-Appendices-FINAL.pdf
 
 #load in the data
-vaquita <- read.csv("C:/Users/ameli/Downloads/vaquita_PAM.csv")
+vaquita <- read.csv(here("Artiodactyla_activity_data/Jaramillo-Legorreta_2023_phocoena_sinus.csv"))
 vaquita$datetime <- parse_date(vaquita$Start)
 vaquita$hour <- hour(vaquita$datetime)
 vaquita <- vaquita[order(vaquita$hour, decreasing = TRUE), ]
 
 #red lines indicate onset of dawn and dusk
-ggplot(vaquita, aes(x = hour, fill = Date)) + geom_bar() + geom_vline(xintercept = 5.75, color = "red", size = 2) + geom_vline(xintercept = 19.5, color = "red", size = 2)
+ggplot(vaquita, aes(x = hour, fill = Date)) + geom_bar() + geom_vline(xintercept = 5.75, color = "red", size = 1) + geom_vline(xintercept = 19.5, color = "red", size = 1)
 
-ggplot(vaquita, aes(x = hour)) + geom_density(size = 2) + geom_vline(xintercept = 5.75, color = "red", size = 2) + geom_vline(xintercept = 19.5, color = "red", size = 2)
+ggplot(vaquita, aes(x = hour)) + geom_density(size = 1) + geom_vline(xintercept = 5.75, color = "red", size = 1) + geom_vline(xintercept = 19.5, color = "red", size = 1)
 
 #all data is taken from May in San Felipe, Mexico so sunrise times are about 5:45am and sunset is around 19:30pm
 vaquita$diel <- "day"
@@ -233,23 +231,28 @@ for(i in 1:60)
 
 ggplot(vaquita, aes(x = hour, fill = diel)) + geom_bar() + geom_vline(xintercept = 5.75, color = "red", size = 1) + geom_vline(xintercept = 19.5, color = "red", size = 1)
 
-ggplot(vaquita, aes(x = hour)) +   
-  theme_minimal() +
+vaquita_plot <- 
+  ggplot(vaquita, aes(x = hour)) +   
+  theme_classic() +
   annotate(geom = "rect", xmin = 5, xmax = 5.75, ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 19.5, xmax = 20.25, ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = 5, ymin = -Inf, ymax = Inf, fill = "grey") +
   annotate(geom = "rect", xmin = 20.25, xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey") +
-  geom_density(size = 2) 
+  labs(x = "Hour", y = "Density of detections") +
+  geom_density(size = 1) + ggtitle("Phocoena sinus") + theme(plot.title = element_text(size = 11))
    
+# pdf(here("Figure_folder/Phoeca_sinus_activity_pattern.pdf"), width = 5, height = 3)
+# vaquita_plot
+# dev.off()
 
 # Section 3: Camera trap ungulates -------------------------------------------
-#data from https://doi.org/10.1111/jzo.70062
+#data from https://doi.org/10.1002/ecy.4237 
 #For this analysis, we focused on six camera trap grids in the savanna biome in 
 #northern South Africa: the Associated Private Nature Reserves (around Kruger National Park),
 #Kruger National Park, Madikwe Game Reserve, Pilanesberg National Park, Somkhanda Game Reserve and Venetia Limpopo Nature Reserve 
 
 #Camera trap data for impala, kudu and wildebeest
-camera_trap.df <- read.csv("C:/Users/ameli/Downloads/camtrapHawkes-v.2.0.0/camtrapHawkes/data/camtrap_data/data.csv")
+camera_trap.df <- read.csv(here("Artiodactyla_activity_data/Nicvert_2024_ruminants.csv"))
 camera_trap.df$eventDateTime <- paste(camera_trap.df$eventDate, camera_trap.df$eventTime, sep = " ")
 camera_trap.df$eventDate <- parse_date_time(camera_trap.df$eventDate, orders = "ymd")
 camera_trap.df$eventDateTime <- as_datetime(camera_trap.df$eventDateTime)
@@ -258,11 +261,8 @@ camera_trap.df$hour <- hour(camera_trap.df$eventDateTime)
 camera_trap.df$min <- minute(camera_trap.df$eventDateTime)/60
 camera_trap.df$hourmin <- as.numeric(camera_trap.df$hour) + as.numeric(camera_trap.df$min)
 
-#plot number of detections per hour and minute
-ggplot(camera_trap.df, aes(x = hourmin)) + geom_density(size = 2)
-
-#separate by location (six different parks) 
-ggplot(camera_trap.df, aes(x = hourmin)) + geom_density(size = 2) + facet_wrap(~locationID)
+#plot number of detections per hour and minute, separate by location (six different parks) 
+ggplot(camera_trap.df, aes(x = hourmin)) + geom_density(size = 1) + facet_wrap(~locationID)
 
 #sites are labelled A-F so its undetermined which site is which park
 #therefore we can't use the specific coordinates for each so use coordinates roughly equidistant from all (-25, 30)
@@ -296,35 +296,43 @@ camera_trap.df %>% summarize(dawn_end = max(dawn_end) - min(dawn_end),  dawn_sta
                              dusk_end = max(dusk_start) - min(dusk_start), dusk_start = max(dusk_start) - min(dusk_start))
 
 #Impala Aepyceros melampus
-
-impala <- camera_trap.df %>% filter(snapshotName == "impala") 
-ggplot(impala, aes(x = hourmin)) +
-  theme_minimal() + 
+impala <- camera_trap.df %>% filter(snapshotName == "impala")
+impala_plot <-
+  ggplot(impala, aes(x = hourmin, colour = locationID)) +
+  theme_classic() + 
+  scale_colour_viridis_d(name = "Location", option = "magma", begin = 0, end = 0.8) + 
   annotate(geom = "rect", xmin = mean(impala$dawn_start), xmax = mean(impala$dawn_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(impala$dusk_start), xmax = mean(impala$dusk_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(impala$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(impala$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Camera trap detections of Aepyceros melampus")
+  labs(x = "Hour", y = "Density of detections") + 
+  geom_density(size = 1) + ggtitle("Aepyceros melampus")  + theme(plot.title = element_text(size = 11))
 
 #Greater kudu Tragelaphus strepsiceros
-kudu <- camera_trap.df %>% filter(snapshotName == "kudu") 
-ggplot(kudu, aes(x = hourmin)) +
-  theme_minimal() + 
+kudu <- camera_trap.df %>% filter(snapshotName == "kudu")
+kudu_plot <- 
+  ggplot(kudu, aes(x = hourmin, colour = locationID)) +
+  theme_classic() + 
+  scale_colour_viridis_d(name = "Location", option = "magma", begin = 0, end = 0.8) +
   annotate(geom = "rect", xmin = mean(kudu$dawn_start), xmax = mean(kudu$dawn_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(kudu$dusk_start), xmax = mean(kudu$dusk_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(kudu$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(kudu$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Camera trap detections of Tragelaphus strepsiceros")
+  labs(x = "Hour", y = "Density of detections") +
+  geom_density(size = 1) + ggtitle("Tragelaphus strepsiceros")  + theme(plot.title = element_text(size = 11))
 
 #Blue wildebeest Connochaetes taurinus
-blue <- camera_trap.df %>% filter(snapshotName == "wildebeestblue") 
-ggplot(blue, aes(x = hourmin)) +
-  theme_minimal() + 
+blue <- camera_trap.df %>% filter(snapshotName == "wildebeestblue")
+blue_plot <-
+  ggplot(blue, aes(x = hourmin, colour = locationID)) +
+  theme_classic() + 
+  scale_colour_viridis_d(name = "Location", option = "magma", begin = 0, end = 0.8) +
   annotate(geom = "rect", xmin = mean(blue$dawn_start), xmax = mean(blue$dawn_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(blue$dusk_start), xmax = mean(blue$dusk_end), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(blue$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(blue$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Camera trap detections of Connochaetes taurinus")
+  labs(x = "Hour", y = "Density of detections") +
+  geom_density(size = 1) + ggtitle("Connochaetes taurinus")  + theme(plot.title = element_text(size = 11))
 
 # Section 4: Beaked whale HARP data ----------------------------------------------------
 
@@ -335,37 +343,54 @@ ggplot(blue, aes(x = hourmin)) +
 #we need to convert this into a readable datetime from the matlab format into the r format
 #then plot the number of detections per hour (or half hour)
 
-#to get all observations, load in the other mat files 
 #for mesoplodon mirus
-# filenames <- list.files("C:/Users/ameli/Downloads/Mm", pattern = "*.mat", full.names = TRUE)
-# whalename <- "mesoplodon_mirus"
+filenames1 <- list.files(here("Artiodactyla_activity_data/Solsona-Berga_2024_M_mirus"), pattern = "*.mat", full.names = TRUE)
+#each file is named after the site it was recorded at and the disk number (tends to be multiple per site)
+files1 <- lapply(filenames1, readMat)
+#make a dataframe out of just the time column from each mat file, all other information is irrelevant
+files1 <- lapply(files1, function(x) as.data.frame(x$MTT))
+#extract the location name from the file name
+filenames1 <- str_remove(filenames1, "C:/Users/ameli/Documents/R_projects/cetacean_sleep/Artiodactyla_activity_data/Solsona-Berga_2024_M_mirus")
+#add in metadata from file names
+names(files1) <- filenames1
+#append all mat files together into one large dataframe of observations
+detections1 <- do.call(rbind,files1)
+detections1$Species <- "Mesoplodon mirus" #184,801 detections
 
 # # #for mesoplodon europaeus
-# filenames <- list.files("C:/Users/ameli/Downloads/Me", pattern = "*.mat", full.names = TRUE)
-# whalename <- "mesoplodon_europaeus"
-
-#for kogiia
-filenames <- list.files("C:/Users/ameli/Downloads/Kogia", pattern = "*.mat", full.names = TRUE)
-whalename <- "kogia"
-
+filenames2 <- list.files(here("Artiodactyla_activity_data/Solsona-Berga_2024_M_europaeus"), pattern = "*.mat", full.names = TRUE)
 #each file is named after the site it was recorded at and the disk number (tends to be multiple per site)
-
-files <- lapply(filenames, readMat)
+files2 <- lapply(filenames2, readMat)
 #make a dataframe out of just the time column from each mat file, all other information is irrelevant
-files <- lapply(files, function(x) as.data.frame(x$MTT))
-
+files2 <- lapply(files2, function(x) as.data.frame(x$MTT))
 #extract the location name from the file name
-filenames <- str_remove(filenames, "C:/Users/ameli/Downloads/")
+filenames2 <- str_remove(filenames2, "C:/Users/ameli/Documents/R_projects/cetacean_sleep/Artiodactyla_activity_data/Solsona-Berga_2024_M_europaeus")
 #add in metadata from file names
-names(files) <- filenames
-
+names(files2) <- filenames2
 #append all mat files together into one large dataframe of observations
-test <- do.call(rbind,files)
+detections2 <- do.call(rbind,files2)
+detections2$Species <- "Mesoplodon europaeus" #129,3807 detections
 
-#now we have a df with 184,081 rows, each with the timepoint of a detection in MATLAB datetime format
-test$metadata <- row.names(test)
-colnames(test) <- c("MATLAB_datetime", "metadata")
+#for kogiia sima
+filenames3 <- list.files(here("Artiodactyla_activity_data/Solsona-Berga_2024_Kogia"), pattern = "*.mat", full.names = TRUE)
+#each file is named after the site it was recorded at and the disk number (tends to be multiple per site)
+files3 <- lapply(filenames3, readMat)
+#make a dataframe out of just the time column from each mat file, all other information is irrelevant
+files3 <- lapply(files3, function(x) as.data.frame(x$MTT))
+#extract the location name from the file name
+filenames3 <- str_remove(filenames3, "C:/Users/ameli/Documents/R_projects/cetacean_sleep/Artiodactyla_activity_data/Solsona-Berga_2024_Kogia")
+#add in metadata from file names
+names(files3) <- filenames3
+#append all mat files together into one large dataframe of observations
+detections3 <- do.call(rbind,files3)
+detections3$Species <- "Kogia sima" #1,970 detections
 
+#bind together all three species
+detections <- rbind(detections1, detections2, detections3)
+
+#now we have a df with 1,479,858 rows, each with the timepoint of a detection in MATLAB datetime format
+detections$metadata <- row.names(detections)
+colnames(detections) <- c("MATLAB_datetime", "Species", "metadata")
 
 #MTT: Time of event as Matlab datenumber (days elapsed since January 0, 0000).
 #refer to https://stackoverflow.com/questions/30072063/how-to-extract-the-time-using-r-from-a-matlab-serial-date-number
@@ -376,98 +401,95 @@ Matlab2Rdate(735147.4)
 "2012-10-05"
 
 (735147.4 - 719529)*86400
-#test datetime conversion, this doesn't seem right is this data really from 2012?
+#test datetime conversion
 as.POSIXct(1349427015.16854, origin = "1970-01-01", tz = "UTC")
 "2012-10-05 08:50:15 UTC"
 
 #first convert the times into the R format 
-#test$R_datetime <- lapply(test$MATLAB_datetime, function(x) (x - 719529)*86400)
-test <- test %>% mutate(R_datetime = (MATLAB_datetime - 719529)*86400)
+detections <- detections %>% mutate(R_datetime = (MATLAB_datetime - 719529)*86400)
 
 #extract the datetime 
 #Kogia includes Sept - Nov 2011, October - Dec 2012,May -June + Nov-Dec 2016 and March + May 2017
 #M mirus includes observations from many months in 2015-2018
-test <- test %>% mutate(times = as.POSIXct(R_datetime, origin = "1970-01-01", tz = "UTC"))
+detections <- detections %>% mutate(times = as.POSIXct(R_datetime, origin = "1970-01-01", tz = "UTC"))
 
 #separate out into component parts 
-test$year <- year(test$times)
-test$month <- month(test$times)
-test$day <- day(test$times)
-test$hour <- hour(test$times)
-test$minute <- minute(test$times)
-test$second <- second(test$times)
-test$hourmin <- as.numeric(test$hour) + as.numeric((test$minute)/60)
+detections$year <- year(detections$times)
+detections$month <- month(detections$times)
+detections$day <- day(detections$times)
+detections$hour <- hour(detections$times)
+detections$minute <- minute(detections$times)
+detections$second <- second(detections$times)
+detections$hourmin <- as.numeric(detections$hour) + as.numeric((detections$minute)/60)
 
 #plot the total detections in each hour bin
-ggplot(test, aes(x = hourmin)) + geom_density() + facet_wrap(~year + month, scales = "free")
+ggplot(detections, aes(x = hourmin, colour = Species)) + geom_density() + theme_classic()
 
 #for each site add the latitude and longitude (manually)
-test$location <-str_replace(test$metadata, pattern = r"([a-zA-Z0-9|/]*_([a-zA-Z0-9]*)_.*)", replacement = r"(\1)")
+detections$location <-str_replace(detections$metadata, pattern = r"([a-zA-Z0-9|/]*_([a-zA-Z0-9]*)_.*)", replacement = r"(\1)")
 
-test$lat <- "Unknown"
-test$lon <- "Unknown"
-
-unique(test$location)
+detections$lat <- "Unknown"
+detections$lon <- "Unknown"
+unique(detections$location)
 
 ###Kogia sites
 #HH site: 25 (N), -85 (W)
-test[test$location == "HH01", "lat"] <- 25
-test[test$location == "HH01", "lon"] <- -85
+detections[detections$location == "HH01", "lat"] <- 25
+detections[detections$location == "HH01", "lon"] <- -85
 
 #BS site: 30 (N), -77 (W)
-test[test$location == "BS", "lat"] <- 30
-test[test$location == "BS", "lon"] <- -77
+detections[detections$location == "BS", "lat"] <- 30
+detections[detections$location == "BS", "lon"] <- -77
 
 ###M mirus sites
 #HZ site: 41 (N), -66 (W)
-test[test$location == "HZ", "lat"] <- 41
-test[test$location == "HZ", "lon"] <- -66
+detections[detections$location == "HZ", "lat"] <- 41
+detections[detections$location == "HZ", "lon"] <- -66
 
 #BR site: 40 (N), -68 (W)
-test[test$location == "BR", "lat"] <- 40
-test[test$location == "BR", "lon"] <- -68
+detections[detections$location == "BR", "lat"] <- 40
+detections[detections$location == "BR", "lon"] <- -68
 
 #NC site: 40 (N), -70 (W)
-test[test$location == "NC", "lat"] <- 40
-test[test$location == "NC", "lon"] <- -70
+detections[detections$location == "NC", "lat"] <- 40
+detections[detections$location == "NC", "lon"] <- -70
 
 #NFC-A site: 37 (N), -75 (W)
-test[test$location == "A", "lat"] <- 37
-test[test$location == "A", "lon"] <- -75
-
+detections[detections$location == "A", "lat"] <- 37
+detections[detections$location == "A", "lon"] <- -75
 
 #M europaeus sites (also BS and HH)
 #DT site: 25 (N), -85 (W)
-test[test$location %in% c("DT", "DT01", "DT02"), "lat"] <- 25
-test[test$location %in% c("DT", "DT01", "DT02"), "lon"] <- -85
+detections[detections$location %in% c("DT", "DT01", "DT02"), "lat"] <- 25
+detections[detections$location %in% c("DT", "DT01", "DT02"), "lon"] <- -85
 
 #MC site: 28 (N), -88 (W)
-test[test$location %in% c("MC05", "MC06"), "lat"] <- 28
-test[test$location %in% c("MC05", "MC06"), "lon"] <- -88
+detections[detections$location %in% c("MC05", "MC06"), "lat"] <- 28
+detections[detections$location %in% c("MC05", "MC06"), "lon"] <- -88
 
 #GC site: 27(N), -92 (W)
-test[test$location %in% c("GC01", "GC02", "GC03", "GC04"), "lat"] <- 27
-test[test$location %in% c("GC01", "GC02", "GC03", "GC04"), "lon"] <- -92
+detections[detections$location %in% c("GC01", "GC02", "GC03", "GC04"), "lat"] <- 27
+detections[detections$location %in% c("GC01", "GC02", "GC03", "GC04"), "lon"] <- -92
 
 #BM disk4 site: 32(N), -65 (W)
-test[test$location %in% c("disk04"), "lat"] <- 32
-test[test$location %in% c("disk04"), "lon"] <- -65
+detections[detections$location %in% c("disk04"), "lat"] <- 32
+detections[detections$location %in% c("disk04"), "lon"] <- -65
 
 #HAT B site: 35(N), -75 (W)
-test[test$location %in% c("B"), "lat"] <- 35
-test[test$location %in% c("B"), "lon"] <- -75
+detections[detections$location %in% c("B"), "lat"] <- 35
+detections[detections$location %in% c("B"), "lon"] <- -75
 
 #JAX site (disk10,13,16): 30(N), -80 (W)
-test[test$location %in% c("disk10", "disk13", "disk16"), "lat"] <- 30
-test[test$location %in% c("disk10", "disk13", "disk16"), "lon"] <- -80
+detections[detections$location %in% c("disk10", "disk13", "disk16"), "lat"] <- 30
+detections[detections$location %in% c("disk10", "disk13", "disk16"), "lon"] <- -80
 
 #for now filter out the observations with unknown locations
-test <- test %>% filter(!location %in% c("disk01", "disk02", "disk03"))
+detections <- detections %>% filter(!location %in% c("disk01", "disk02", "disk03"))
 
-test$lat <- as.numeric(test$lat)
-test$lon <- as.numeric(test$lon)
-test$timezone <- tz_lookup_coords(test$lat, test$lon, method = "accurate")
-test$date <- as.Date(round_date(test$times))
+detections$lat <- as.numeric(detections$lat)
+detections$lon <- as.numeric(detections$lon)
+detections$timezone <- tz_lookup_coords(detections$lat, detections$lon, method = "accurate")
+detections$date <- as.Date(round_date(detections$times))
                      
 #use suncalc to get sunrise and sunset times
 #site is the Golf of Mexico, Howell Hook. Lat = 25N, long = 85W
@@ -478,9 +500,9 @@ getSunlightTimes(date = as.Date(parse_date_time("2012-10-05", orders = "ymd")), 
 #use nautical dawn as the start of dawn and sunrise end as the end (encompasses dawn) -about an hour
 #use sunset start as the start of dusk and nautical dusk as the end (encompasses dusk) -also about an hour
 
-sun_times <- getSunlightTimes(data = test[, c("date", "lon", "lat")], 
+sun_times <- getSunlightTimes(data = detections[, c("date", "lon", "lat")], 
                               keep = c("sunriseEnd", "sunsetStart", "nauticalDawn", "nauticalDusk"),
-                              tz = test[, c("timezone")])
+                              tz = detections[, c("timezone")])
 
 
 sun_times <- sun_times %>% separate_wider_delim(cols = c(4:7), delim = " ", names_sep = "_") %>% select(date, nauticalDawn_2, nauticalDusk_2, sunriseEnd_2 ,sunsetStart_2)
@@ -490,146 +512,63 @@ sun_times <- sun_times %>% mutate(dawn_start = as.numeric(nauticalDawn_2_1) + as
   mutate(dusk_start = as.numeric(sunsetStart_2_1) + as.numeric(sunsetStart_2_2)/60) %>% 
   mutate(dusk_end = as.numeric(nauticalDusk_2_1) + as.numeric(nauticalDusk_2_2)/60) %>% select(date, dusk_start, dusk_end, dawn_start, dawn_end)
 
-test <- cbind(test, sun_times[, -c(1)])
+detections <- cbind(detections, sun_times[, -c(1)])
+
+#replace location codes with their names
+unique(detections$location)
+detections$location <- str_replace(detections$location, "A", "Norfolk canyon")
+detections$location <- str_replace(detections$location, "B", "Hattaras")
+detections$location <- str_replace(detections$location, "HattarasS", "Blake Spur")
+detections$location <- str_replace(detections$location, "disk04", "Bermuda")
+
+detections$location <- str_replace(detections$location, "HattarasR", "Bear Seamount")
+detections$location <- str_replace(detections$location, "HZ", "Heezen canyon")
+detections$location <- str_replace(detections$location, "NC", "Nantucket canyon")
+detections$location <- str_replace(detections$location, "HH01", "Howell Hook")
+
+detections$location <- str_replace_all(detections$location, c("DT" = "Dry Tortugas", "Dry Tortugas01" = "Dry Tortugas", "Dry Tortugas02" ="Dry Tortugas"))
+detections$location <- str_replace_all(detections$location, c("GC01" =  "Green Canyon", "GC02" =  "Green Canyon", "GC03" =  "Green Canyon", "GC04" =  "Green Canyon"))
+detections$location <- str_replace_all(detections$location, c("MC05" = "Mississippi Canyon", "MC06" = "Mississippi Canyon"))
+detections$location <- str_replace_all(detections$location, c("disk10" ="Jacksonville", "disk13" =  "Jacksonville", "disk16" = "Jacksonville"))
+
+#save out as RDS file to back up to github
+saveRDS(detections, file = here("Artiodactyla_activity_data/Solsona-Berga_2024_final.rds"))
+
+#use below
+detections <- readRDS(here("Artiodactyla_activity_data/Solsona-Berga_2024_final.rds"))
 
 #plot overall activity 
-ggplot(test, aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + scale_x_continuous(limits = c(0, 24)) +
-  ggtitle("Activity across all locations") #+ facet_wrap(~month , scales = "free")
-
-
-#plot by the final locations
-
-#Kogia
-test %>% filter(location == "HH01") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Howell Hook location") #+ facet_wrap(~year)
-
-test %>% filter(location == "BS") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Blake Spur location") #+ facet_wrap(~year, scales = "free")
-
-  
-#M mirus
-test %>% filter(location == "A") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Norfolk canyon location") #+ facet_wrap(~year)
-
-test %>% filter(location == "BR") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Bear Seamount") #+ facet_wrap(~year)
-
-test %>% filter(location == "HZ") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Heezen canyon") #+ facet_wrap(~year)
-
-test %>% filter(location == "NC") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Nantucket canyon") #+ facet_wrap(~year)
-
-#M europaeus
-test %>% filter(location %in% c("GC01", "GC02", "GC03", "GC04")) %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end,na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Green canyon") #+ facet_wrap(~year)
-
-test %>% filter(location %in% c("DT", "DT01", "DT02")) %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Dry Tortugas") #+ facet_wrap(~year)
-
-test %>% filter(location == "B") %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Hatteras") #+ facet_wrap(~year)
-
-test %>% filter(location %in% c("disk10", "disk13", "disk16")) %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Jacksonville") #+ facet_wrap(~year)
-
-test %>% filter(location %in% c("MC05", "MC06")) %>%
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + ggtitle("Mississippi Canyon") #+ facet_wrap(~year)
+all_sps_plot <-  detections %>% filter(location != "Bermuda") %>%
+  ggplot(., aes(x = hourmin, colour = location)) + 
+  theme_classic() +
+  scale_colour_viridis_d(name = "Location", option = "viridis") +
+  annotate(geom = "rect", xmin = mean(detections$dawn_start, na.rm = TRUE), xmax = mean(detections$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = mean(detections$dusk_start, na.rm = TRUE), xmax = mean(detections$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = 0, xmax = mean(detections$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
+  annotate(geom = "rect", xmin = mean(detections$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
+  geom_density(size = 1) +
+  labs(x = "Hour", y = "Density of detections") + ggtitle("Kogia sima                                Mesoplodon europaeus            Mesoplodon mirus") +
+  facet_wrap(~Species, scales = "free") + theme(strip.text = element_blank(), plot.title = element_text(size = 11))
 
 
 # Section 5: Narwhal ---------------------------------------------------------
 
 #### Narwhals https://www.science.org/doi/10.1126/sciadv.ade0440?adobe_mc=MCMID%3D53649406453315412110550155571971043555%7CMCORGID%3D242B6472541199F70A4C98A6%2540AdobeOrg%7CTS%3D1695155886#supplementary-materials
 
-narwhale <- read.csv("C:/Users/ameli/Downloads/doi_10.5061_dryad.8gtht76tq__v5/Data_Buzz.txt", sep = "\t")
-
-head(narwhale)
-View(narwhale)
+narwhal <- read.csv(here("Artiodactyla_activity_data/Tervo_2023_Monodon_monoceros.txt"), sep = "\t")
 
 ## Parse time into datetime format
-narwhale$datetime <- parse_date(narwhale$GPS_time)
-narwhale$hour <- hour(narwhale$datetime)
-narwhale$minute <- minute(narwhale$datetime)
-narwhale$day <- day(narwhale$datetime)
-narwhale$month <- month(narwhale$datetime) #all observations in 2018
-narwhale$hourmin <- as.numeric(narwhale$hour) + as.numeric((narwhale$minute)/60)
-narwhale$date <- as.Date(round_date(narwhale$datetime))
+narwhal$datetime <- parse_date(narwhal$GPS_time)
+narwhal$hour <- hour(narwhal$datetime)
+narwhal$minute <- minute(narwhal$datetime)
+narwhal$day <- day(narwhal$datetime)
+narwhal$month <- month(narwhal$datetime) #all observations in 2018
+narwhal$hourmin <- as.numeric(narwhal$hour) + as.numeric((narwhal$minute)/60)
+narwhal$date <- as.Date(round_date(narwhal$datetime))
 
 #conducted in East Greenland, coordinates based on average location from figure 3
-narwhale$lat <- 70.5
-narwhale$lon <- -27
+narwhal$lat <- 70.5
+narwhal$lon <- -27
 #get the timezone
 tz_lookup_coords(70.5, -27, method = "accurate")
 
@@ -643,7 +582,7 @@ getSunlightTimes(date = as.Date(parse_date_time("2018-08-24", orders = "ymd")), 
 #use sunset start as the start of dusk and nautical dusk as the end (encompasses dusk) -also about an hour
 
 #cannot calculate nautical twilight so use dawn and dusk instead
-sun_times <- getSunlightTimes(data = narwhale[, c("date", "lon", "lat")], 
+sun_times <- getSunlightTimes(data = narwhal[, c("date", "lon", "lat")], 
                               keep = c("sunriseEnd", "sunsetStart", "dawn", "dusk"),
                               tz = "America/Godthab")
 
@@ -655,63 +594,67 @@ sun_times <- sun_times %>% mutate(dawn_start = as.numeric(dawn_2_1) + as.numeric
   mutate(dusk_start = as.numeric(sunsetStart_2_1) + as.numeric(sunsetStart_2_2)/60) %>% 
   mutate(dusk_end = as.numeric(dusk_2_1) + as.numeric(dusk_2_2)/60) %>% select(date, dusk_start, dusk_end, dawn_start, dawn_end)
 
-test <- cbind(narwhale, sun_times[, -c(1)])
+narwhal <- cbind(narwhal, sun_times[, -c(1)])
+
+#save out as RDS file to back up to github
+saveRDS(narwhal, file = here("Artiodactyla_activity_data/Tervo_2023_final.rds"))
+
+#use below
+narwhal <- readRDS(here("Artiodactyla_activity_data/Tervo_2023_final.rds"))
 
 #plot overall activity 
-test %>% filter(Buzz == 1) %>% 
-  ggplot(., aes(x = hourmin)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_density(size = 2) + scale_x_continuous(limits = c(0, 24)) +
-  ggtitle("Activity across all individuals") + facet_wrap(~month, scales = "free")
+narwhal_PAM <- 
+  narwhal %>% filter(Buzz == 1) %>% 
+  ggplot(., aes(x = hourmin, colour = Ind)) + 
+  theme_classic() +
+  scale_colour_viridis_d(name = "Individual", option = "mako") +
+  annotate(geom = "rect", xmin = mean(narwhal$dawn_start, na.rm = TRUE), xmax = mean(narwhal$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = mean(narwhal$dusk_start, na.rm = TRUE), xmax = mean(narwhal$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = 0, xmax = mean(narwhal$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
+  annotate(geom = "rect", xmin = mean(narwhal$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
+  geom_density(size = 1) + 
+  labs(y = "Density of detections", x = "Hour") +
+  ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11))
 
 
 #plot depth vs time 
-
-#Asgeir only has full 24h recordings from August 25, 26, 27, 28, 29
-test %>% filter(Ind == "Asgeir", day %in% c(25, 26, 27, 28, 29)) %>% 
-  ggplot(., aes(x = round(hourmin, 1), y = Depth)) + 
-  theme_minimal() +
-  annotate(geom = "rect", xmin = mean(test$dawn_start, na.rm = TRUE), xmax = mean(test$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = mean(test$dusk_start, na.rm = TRUE), xmax = mean(test$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
-  annotate(geom = "rect", xmin = 0, xmax = mean(test$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
-  annotate(geom = "rect", xmin = mean(test$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_point() + geom_line() + facet_wrap(~day)
-
-
-test %>% filter(Ind == "Asgeir", buzz == 1) %>% 
-  ggplot(., aes(x = round(hourmin, 1), y = Depth))
-
-mean_dive <- test %>% filter(day %in% c(25, 26, 27, 28, 29, 30)) %>% 
+mean_dive <- narwhal %>% filter(day %in% c(25, 26, 27, 28, 29, 30)) %>% #filter for days with full recordings
   mutate(hourmin = round(hourmin, 2)) %>%
   group_by(month, day, hour, minute, dusk_start, dusk_end, dawn_start, dawn_end, Ind) %>% 
   summarize(mean_depth = mean(Depth), buzz = mean(Buzz)) 
 
 mean_dive$hourmin <- as.numeric(mean_dive$hour) + as.numeric((mean_dive$minute)/60)
 
-mean_dive %>% 
-  filter(Ind == "Siggi", day %in% c(26, 27, 28)) %>%
-  ggplot(., aes(x = hourmin, y = mean_depth, colour = buzz)) +
-  theme_minimal() +
+narwhal_dive <-
+  ggplot(mean_dive, aes(x = hourmin, y = mean_depth, colour = Ind)) +
+  theme_classic() +
+  scale_colour_viridis_d(name = "Individual", option = "mako") +
   annotate(geom = "rect", xmin = mean(mean_dive$dawn_start, na.rm = TRUE), xmax = mean(mean_dive$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(mean_dive$dusk_start, na.rm = TRUE), xmax = mean(mean_dive$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(mean_dive$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(mean_dive$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_point() + geom_line() + facet_wrap(~day)
+  labs(x = "Hour", y = "Average depth") +
+  geom_smooth() + ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11))
   
-
 #does average depth vary with time of day?
-test %>%
+narwhal %>%
   group_by(month, day, hour, Ind) %>% 
   summarize(mean_depth = mean(Depth)) %>%
   ggplot(., aes(x = as.factor(hour), y = mean_depth)) + 
-  theme_minimal() +
+  theme_classic() +
   annotate(geom = "rect", xmin = mean(mean_dive$dawn_start, na.rm = TRUE), xmax = mean(mean_dive$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = mean(mean_dive$dusk_start, na.rm = TRUE), xmax = mean(mean_dive$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
   annotate(geom = "rect", xmin = 0, xmax = mean(mean_dive$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(mean_dive$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
-  geom_boxplot(outlier.shape = NA, fill = "lightblue")# + facet_wrap(~Ind)
+  geom_boxplot(outlier.shape = NA)# + facet_wrap(~Ind)
 
+
+# Section 6: Save out combined plots --------------------------------------
+
+pdf(here("Figure_folder/primary_data_activity_patterns.pdf"), width = 8.5, height = 8)
+((impala_plot + theme(legend.position = "none")) + (kudu_plot + theme(legend.position = "none", axis.title.y = element_blank())) + (blue_plot + theme(legend.position = "right", axis.title.y = element_blank())))/
+  (vaquita_plot + hyper_plot1 + hyper_plot2) /
+  (all_sps_plot + theme(legend.position = "right"))/
+  ((narwhal_dive + theme(legend.position = "none")) + (narwhal_PAM + theme(legend.position = "right")) + plot_spacer()) +
+  plot_layout(guides = "collect") 
+dev.off()

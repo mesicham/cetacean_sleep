@@ -2654,3 +2654,44 @@ returnCumSums <- function(ancestral_states = ancestral_states, phylo_tree = trpy
 
 
 
+# Section: HARP data individual species plots -----------------------------
+
+#plot by Species per the final locations
+
+kogia_detections <- detections %>% filter(Species == "Kogia_sima")
+kogia_plot <- 
+  ggplot(kogia_detections, aes(x = hourmin, colour = location)) + 
+  theme_classic() +
+  scale_colour_viridis_d(name = "Location", option = "viridis") +
+  annotate(geom = "rect", xmin = mean(kogia_detections$dawn_start, na.rm = TRUE), xmax = mean(kogia_detections$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = mean(kogia_detections$dusk_start, na.rm = TRUE), xmax = mean(kogia_detections$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = 0, xmax = mean(kogia_detections$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
+  annotate(geom = "rect", xmin = mean(kogia_detections$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
+  geom_density(size = 1) + labs(x = "Hour", y = "Density of detections") + 
+  ggtitle("Kogia sima") #+ facet_wrap(~year)
+
+m_euro_detection <- detections %>% filter(Species == "Mesoplodon_europaeus", location != "Bermuda") 
+m_euro_plot <-
+  ggplot(m_euro_detection, aes(x = hourmin, colour = location)) + 
+  theme_classic() +
+  scale_colour_viridis_d(name = "Location", option = "viridis") +
+  #scale_colour_manual(values = c("lightskyblue", "blue", "slateblue", "violet", "darkorchid", "navy", "deepskyblue", "darkorchid4")) +
+  annotate(geom = "rect", xmin = mean(m_euro_detection$dawn_start, na.rm = TRUE), xmax = mean(m_euro_detection$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = mean(m_euro_detection$dusk_start, na.rm = TRUE), xmax = mean(m_euro_detection$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = 0, xmax = mean(m_euro_detection$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
+  annotate(geom = "rect", xmin = mean(m_euro_detection$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
+  geom_density(size = 1) + labs(x = "Hour", y = "Density of detections") +
+  ggtitle("Mesoplodon europaeus") #+ facet_wrap(~year)
+
+mirus_detections <- detections %>% filter(Species == "Mesoplodon_mirus")
+m_mirus_plot <-
+  ggplot(mirus_detections, aes(x = hourmin, colour = location)) + 
+  theme_classic() +
+  scale_colour_viridis_d(name = "Location", option = "viridis") +
+  annotate(geom = "rect", xmin = mean(mirus_detections$dawn_start, na.rm = TRUE), xmax = mean(mirus_detections$dawn_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = mean(mirus_detections$dusk_start, na.rm = TRUE), xmax = mean(mirus_detections$dusk_end, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "pink") +
+  annotate(geom = "rect", xmin = 0, xmax = mean(mirus_detections$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
+  annotate(geom = "rect", xmin = mean(mirus_detections$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
+  geom_density(size = 1) + labs(x = "Hour", y = "Density of detections") +
+  ggtitle("Mesoplodon mirus") #+ facet_wrap(~year)
+
