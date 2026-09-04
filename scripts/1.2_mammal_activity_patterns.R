@@ -121,6 +121,20 @@ trait.data[trait.data$tips == "Pseudois_schaeferi", "tips"] <- "Pseudois_nayaur"
 #save out Bennie mammal data, 4477 species
 write.csv(trait.data, here("Bennie_mam_data.csv"), row.names = FALSE)
 
+
+# Section 1.5 Cox et al dataframe -----------------------------------------
+Cox_mam_data <- read_xlsx(here("Cox_diel_activity_data.xlsx"))
+#Activity_DD and Activity_IM are the same except for 	Moschiola kathygre which is NA in Activity_DD
+Cox_mam_data <- Cox_mam_data %>% filter(Order == "Cetartiodactyla") %>%
+  select(Binomial_iucn, Family, Activity_IM) 
+
+colnames(Cox_mam_data) <- c("Species_name", "Family", "Cox_activity_pattern")
+Cox_mam_data$tips <- str_replace(Cox_mam_data$Species_name, pattern = " ", replacement = "_")
+Cox_mam_data$Cox_activity_pattern <- tolower(Cox_mam_data$Cox_activity_pattern)
+
+#save out, 233 species
+write.csv(Cox_mam_data, here("Cox_mam_data.csv"), row.names = FALSE)
+
 # Section 2: Maor dataframe -----------------------------------------------
 #read in the Maor diel activity patterns
 #from https://doi.org/10.1038/s41559-017-0366-5 
@@ -207,7 +221,7 @@ write.csv(maor_mam_data, here("Maor_mam_data.csv"), row.names  = FALSE)
 # Section 3: Baker dataframe ----------------------------------------------
 
 #Baker et al dataset, a combination of primary data (200sps), the Bennie et al dataset and pantheria
-Baker_df <- read_xlsx(here("Baker_diel_activity_data.xlsx"))
+Baker_df <- read_xlsx("ecomorphological_traits\\Baker_2019.xlsx")
 Baker_df <- Baker_df[2: nrow(Baker_df),]
 colnames(Baker_df) <- c("tips", "Order", "Corneal_diameter", "Axial_length", "Activity_pattern", "Source")
 
@@ -321,7 +335,7 @@ concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
 confusion_plot_maor <-
   ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
   scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Maor et al", y = "Mesich et al") + 
+  labs(x = "Maor et al", y = "Current study") + 
   theme_void() +
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45 ,
                                                                                                  hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
@@ -338,7 +352,6 @@ Bennie_diel <- Bennie_diel[Bennie_diel$tips %in% artio_df$tips, ] #224 sps when 
 
 #merge my artiodactyla data with the mammal data
 Bennie_diel <- merge(Bennie_diel, artio_df, by = "tips", all.x = TRUE) 
-Bennie_diel$exact_match <- Bennie_diel$Bennie_activity_pattern == Bennie_diel$Diel_Pattern
 
 #function for comparing entries, splits and compares each segment
 compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
@@ -366,6 +379,9 @@ for(i in 1:nrow(Bennie_diel)){
 }
 
 Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("cathemeral/crepuscular", "Crepuscular", x)}))
+
+Bennie_diel$exact_match <- Bennie_diel$Bennie_activity_pattern == Bennie_diel$Diel_Pattern
+
 Bennie_diel <- Bennie_diel %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Bennie_activity_pattern = str_to_title(Bennie_activity_pattern))
 Bennie_diel <- data.frame(lapply(Bennie_diel, function(x) {gsub("/C", " and\nc", x)}))
 
@@ -390,10 +406,82 @@ concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
 confusion_plot_bennie <-
   ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
   scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Bennie et al", y = "Mesich et al") + 
+  labs(x = "Bennie et al", y = "Current study") + 
   theme_void() +
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
 confusion_plot_bennie
+
+
+# Section 5.5 Cox et al comparison ----------------------------------------
+
+#expect this to be similar to Bennie et al since they both use Handbook of mammals as a main source
+
+#my data
+artio_df <- read.csv(here("sleepy_artiodactyla_full.csv")) #235 species with data
+artio_df <- artio_df %>% select(Species_name, Diel_Pattern, max_crep, tips)
+
+#Cox dataset
+Cox_diel <- read.csv(here("Cox_mam_data.csv")) #447 species
+Cox_diel <- Cox_diel[Cox_diel$tips %in% artio_df$tips, ] #224 sps when filtering for those in my dataframe 
+
+#merge my artiodactyla data with the mammal data
+Cox_diel <- merge(Cox_diel, artio_df, by = "tips", all.x = TRUE) 
+Cox_diel$exact_match <- Cox_diel$Cox_activity_pattern == Cox_diel$Diel_Pattern
+
+#function for comparing entries, splits and compares each segment
+compTwo <- function(comp1 = "comp1", comp2 = "comp2") {
+  
+  if(any(is.na(c(comp1, comp2)))) {
+    return(NA)
+  } else {
+    #splits any entries with a backslash into two components (ie nocturnal/crepuscular into nocturnal and crepuscular)
+    comp1 <- str_split(comp1, "/")[[1]]
+    comp2 <- str_split(comp2, "/")[[1]]
+    #then compares if any of the components match
+    if(any(comp1 %in% comp2)) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+  
+}
+
+Cox_diel$approx_match <- "Unknown"
+
+for(i in 1:nrow(Cox_diel)){
+  Cox_diel[i, "approx_match"] <- compTwo(comp1 = Cox_diel[i, "Cox_activity_pattern"], comp2 =  Cox_diel[i, "Diel_Pattern"])
+}
+
+Cox_diel <- data.frame(lapply(Cox_diel, function(x) {gsub("cathemeral/crepuscular", "Crepuscular", x)}))
+Cox_diel <- Cox_diel %>% mutate(Diel_Pattern = str_to_title(Diel_Pattern), Cox_activity_pattern = str_to_title(Cox_activity_pattern))
+Cox_diel <- data.frame(lapply(Cox_diel, function(x) {gsub("/C", " and\nc", x)}))
+
+Cox_sankey <- Cox_diel %>% make_long(Cox_activity_pattern, Diel_Pattern) %>%
+  ggplot(., aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+  geom_sankey(flow.alpha= 0.5, node.color = 1) + geom_sankey_label(size = 3.3, color = 1, fill = "white") + 
+  scale_fill_manual(values = c("#dd8ae7","#EECBAD", "#FC8D62", "#66C2A5", "gold", "palegreen")) +
+  theme_sankey(base_size = 12) +
+  scale_x_discrete(labels = c("Cox_activity_pattern" = "Cox et al \n (n = 224)", "Diel_Pattern" = "Current \ndataset"), expand = expansion(0,0.3)) +
+  theme(legend.position = "none", panel.background = element_rect(fill='transparent', colour = "transparent"), plot.background = element_rect(fill='transparent', color=NA), axis.text = element_text(size = 13), legend.background = element_rect(fill='transparent')) + labs(x = NULL) 
+
+Cox_sankey
+
+#concordance by activity pattern
+concordance <- as.data.frame(table(Cox_diel$Cox_activity_pattern, Cox_diel$Diel_Pattern))
+colnames(concordance) <- c("actual", "predicted", "freq")
+totals_df <- aggregate(concordance$freq, by=list(Category=concordance$actual), FUN=sum)
+colnames(totals_df) <- c("actual", "total")
+concordance <- merge(concordance, totals_df, by = "actual")
+concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
+
+confusion_plot_Cox <-
+  ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
+  scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
+  labs(x = "Cox et al", y = "Current study") + 
+  theme_void() +
+  theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_blank())
+confusion_plot_Cox
 
 # Section 6: Baker et al comparison -----------------------------------------
 #my data
@@ -460,7 +548,7 @@ concordance$percent <- round(concordance$freq / concordance$total * 100, 1)
 confusion_plot_baker <-
   ggplot(concordance, aes(actual, predicted, fill = percent)) + geom_tile() + geom_text(aes(label = paste0(percent, "%")), size = 3) +
   scale_fill_gradient(low = "#F5FBFF", high = "#0070D1") + 
-  labs(x = "Baker et al", y = "Mesich et al") + 
+  labs(x = "Baker et al", y = "Current study") + 
   theme_void() +
   theme(legend.position = "none", axis.text = element_text(size = 9), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), axis.title = element_text(size = 11), axis.title.y = element_text(angle = 90))
 confusion_plot_baker 
@@ -520,7 +608,7 @@ mammals_df <- merge(mammals_df, Baker_df, by = "tips", all = TRUE) #260 species
 #merge my artiodactyla data with the mammal data
 mammals_df <- merge(mammals_df, artio_df, by = "tips", all.x = TRUE) #265 species
 
-colnames(mammals_df) <- c("tips", "Maor_diel", "Bennie_diel", "Baker_diel", "six_state")
+colnames(mammals_df) <- c("tips", "Maor_diel", "Bennie_diel", "Baker_diel", "Diel_Pattern")
 
 #classify partially cathemeral or crepuscular species as cathemeral or crepuscular
 unique(mammals_df$Maor_diel)
@@ -541,13 +629,13 @@ proportion_plot <-
   mammals_df %>% 
   pivot_longer(!tips, names_to = "dataset", values_to = "activity_pattern") %>%
   filter(!is.na(activity_pattern)) %>%
-  ggplot(., aes(x = factor(dataset, levels = c("Baker_diel", "Bennie_diel", "Maor_diel",  "max_crep")), fill = activity_pattern)) + 
+  ggplot(., aes(x = factor(dataset, levels = c("Baker_diel", "Bennie_diel", "Maor_diel",  "Diel_Pattern")), fill = activity_pattern)) + 
   geom_bar(position = "fill", alpha = 0.75) +
   scale_fill_manual(name = "Temporal activity pattern", values= c("#dd8ae7","#EECBAD", "#FC8D62","gold", "#66C2A5", "palegreen"),
                     labels = c("Cathemeral", "Crepuscular", "Diurnal", "Diurnal and crepusuclar", "Nocturnal", "Nocturnal and crepuscular")) +
   labs(y = "Proportion of total species", x = "Clade") + 
-  scale_x_discrete(labels = c("Bennie_diel" = "Bennie et al \n (n = 237)", "max_crep" = "Current \n dataset \n (n = 232)", "Maor_diel" = "Maor et al \n (n =173)", "Baker_diel" = "Baker et al \n (n =210)")) +
-  theme_classic() + theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_blank(), axis.text.y = element_text(size = 9), panel.grid = element_blank())
+  scale_x_discrete(labels = c("Bennie_diel" = "Bennie et al \n (n = 237)", "Diel_Pattern" = "Current study \n (n = 232)", "Maor_diel" = "Maor et al \n (n =173)", "Baker_diel" = "Baker et al \n (n =210)")) +
+  theme_classic() + theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.y = element_text(size = 9), panel.grid = element_blank())
 proportion_plot
 
 
@@ -560,7 +648,7 @@ pdf(here("Figure_folder/combined_sankey_plots0.pdf"), width = 8.6, height = 3.5)
 dev.off()
 
 pdf(here("Figure_folder/combined_sankey_plots1.pdf"), width = 8.8, height = 4)
-Baker_sankey + Bennie_sankey + Maor_sankey2
+Baker_sankey + Bennie_sankey + Maor_sankey2 
 dev.off()
 
 pdf(here("Figure_folder/combined_sankey_plots2.pdf"), width = 8.5, height = 3)

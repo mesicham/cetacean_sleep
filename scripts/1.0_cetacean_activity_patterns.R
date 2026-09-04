@@ -638,7 +638,7 @@ sankey_cet <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = ne
 sankey_cet + coord_flip()
 
 #save out to figure folder
-pdf(here("Figure_folder/Amelia_figures/cet_sankey_plots.pdf"), width = 4.25, height = 5, bg = "transparent")
+pdf(here("Figure_folder/cet_sankey_plots.pdf"), width = 4.25, height = 5, bg = "transparent")
 (sankey_cet + coord_flip())
 dev.off()
 
@@ -660,6 +660,7 @@ df <- data.frame(
              rep("L. Non-crepuscular \n (n = 61)", 2),
              rep("K. Crepuscular \n (n = 23)", 3),
              rep("K. Crepuscular \n (n = 23)", 6),
+             rep("L. Non-crepuscular \n (n = 61)", 51),
              rep("L. Non-crepuscular \n (n = 61)", 8)))
 
 #convert to long format for geomsankey
@@ -677,6 +678,6 @@ sankey_crep_cet <- ggplot(df, aes(x = x, next_x = next_x, node = node, next_node
 sankey_crep_cet + coord_flip()
 
 #save out to figure folder
-pdf(here("Figure_folder/cetacean_crep_flowchart.pdf"), height = 3.75, width = 14.3)
+pdf(here("Figure_folder/cetacean_crep_flowchart.pdf"), height = 3.75, width = 4.3)
 sankey_crep_cet + coord_flip()
 dev.off()
