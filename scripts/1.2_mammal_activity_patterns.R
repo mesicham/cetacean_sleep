@@ -512,7 +512,7 @@ Baker_df <- filter(Baker_df, Order %in% c("Artiodactyla", "Cetacea")) %>% select
 
 Baker_df[!Baker_df$tips %in% artio_df$tips, ]
 
-#filter my dataset
+#filter my dataset, including the 6 cetaceans species in the other datasets
 artio_df <- artio_df %>% filter(Parvorder == "non-cetacean" | tips %in% cetacean_list) %>% select(tips, Diel_Pattern) 
 
 mammals_df <- merge(Maor_diel, Bennie_diel, by = "tips", all = TRUE) #256 species
@@ -546,7 +546,7 @@ proportion_plot <-
   scale_fill_manual(name = "Temporal activity pattern", values= c("#dd8ae7","#EECBAD", "#FC8D62","gold", "#66C2A5", "palegreen"),
                     labels = c("Cathemeral", "Crepuscular", "Diurnal", "Diurnal and crepusuclar", "Nocturnal", "Nocturnal and crepuscular")) +
   labs(y = "Proportion of total species", x = "Clade") + 
-  #scale_x_discrete(labels = c("Bennie_diel" = "Bennie et al \n (n = 237)", "max_crep" = "Current \n dataset \n (n = 232)", "Maor_diel" = "Maor et al \n (n =173)", "Baker_diel" = "Baker et al \n (n =210)")) +
+  scale_x_discrete(labels = c("Bennie_diel" = "Bennie et al \n (n = 237)", "max_crep" = "Current \n dataset \n (n = 232)", "Maor_diel" = "Maor et al \n (n =173)", "Baker_diel" = "Baker et al \n (n =210)")) +
   theme_classic() + theme(legend.position = "none", axis.title.x = element_blank(), axis.title = element_text(size = 11), axis.text.x = element_blank(), axis.text.y = element_text(size = 9), panel.grid = element_blank())
 proportion_plot
 

@@ -634,8 +634,9 @@ narwhal_dive <-
   annotate(geom = "rect", xmin = 0, xmax = mean(mean_dive$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(mean_dive$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   labs(x = "Hour", y = "Average depth") +
-  geom_smooth() + ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11))
-  
+  geom_smooth(method = "loess", formula = "y~x") + ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11))
+
+
 #does average depth vary with time of day?
 narwhal %>%
   group_by(month, day, hour, Ind) %>% 

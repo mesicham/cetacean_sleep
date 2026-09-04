@@ -568,7 +568,7 @@ number_sources <- ggplot(sources_df, aes(x = Var1, y = Freq, fill = Clade)) + ge
 number_sources
 
 #plot number of sources per species
-sources_df <- as.data.frame(table(test_diel_long$Species_name)) %>% mutate(Clade = "Cetacea")
+sources_df <- as.data.frame(table(cet_diel_long$Species_name)) %>% mutate(Clade = "Cetacea")
 sources_df <- rbind(sources_df, (as.data.frame(table(diel_full_long$Species_name))) %>% mutate(Clade = "Terrestrial \nartiodactyls"))
 
 #more than six group together
@@ -607,6 +607,9 @@ cet_sources$numbered <- 1:nrow(cet_sources)
 
 cetacean_numbers <- cet_sources %>% select(Species_name, numbered) %>% pivot_wider(names_from = "Species_name", values_from = "numbered") %>% pivot_longer(everything(), names_to = "Species_name", values_to = "numbered")
 
+#check for duplicates
+nrow(cet_sources[!duplicated(cet_sources$all_sources), ])
+
 #replace sources in the dataset with their reference numbers
 cetaceans_full <- read.csv(here("cetaceans_full.csv"))
 cetaceans_full <- cetaceans_full[!is.na(cetaceans_full$Diel_Pattern), c(1, 3, 5:7)]
@@ -625,6 +628,9 @@ artio_sources <- sources %>% mutate(all_sources = str_replace_all(all_sources, p
   mutate(all_sources = str_replace(all_sources, pattern = "CO;2", replacement = "CO:2")) %>% #manually change links with a ; character
   separate_longer_delim(all_sources, delim = ";") %>% 
   mutate(all_sources = str_replace(all_sources, pattern = "CO:2", replacement = "CO;2"))#change the links back to a ;
+
+#check for duplicates
+nrow(artio_sources[duplicated(artio_sources$all_sources), ])
 
 #give every source a unique reference number (starting from the end of the cetacean df)
 artio_sources$all_sources_numbered <- paste((max(cet_sources$numbered)+1):((max(cet_sources$numbered))+nrow(artio_sources)), artio_sources$all_sources, sep = ". ")

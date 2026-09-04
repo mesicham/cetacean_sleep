@@ -660,7 +660,6 @@ df <- data.frame(
              rep("L. Non-crepuscular \n (n = 61)", 2),
              rep("K. Crepuscular \n (n = 23)", 3),
              rep("K. Crepuscular \n (n = 23)", 6),
-             rep("L. Non-crepuscular \n (n = 61)", 51),
              rep("L. Non-crepuscular \n (n = 61)", 8)))
 
 #convert to long format for geomsankey

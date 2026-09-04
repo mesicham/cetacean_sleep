@@ -4,8 +4,8 @@ setwd(here())
 
 #set the filename for maximum clade credibility results
 #filename <- "artiodactyla_finalized_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"
-#filename <- "whippomorpha_june_2026_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"
-filename <- "ruminants_june_2026_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"
+filename <- "whippomorpha_june_2026_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"
+#filename <- "ruminants_june_2026_max_clade_cred_four_state_max_crep_traits_ER_SYM_CONSYM_ARD_bridge_only_models.rds"
 
 #set the filename for 1k trees results 
 filename_whippo_1k <- "august_whippomorpha_four_state_max_crep_traits_ER_SYM_ARD_CONSYM_bridge_only_models.rds"
@@ -27,18 +27,23 @@ likelihood_metrics$most_likely <- ""
 likelihood_metrics[which(likelihood_metrics$AIC_scores == min(likelihood_metrics$AIC_scores)), "most_likely"] <- "**"
 likelihood_metrics <- likelihood_metrics %>% mutate(delta_AIC = AIC_scores - min(likelihood_metrics$AIC_scores))
 
-knitr::kable(likelihood_metrics, format = "html", digits = 2, caption = filename) %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("likelihood_table.html")
-webshot("likelihood_table.html", file = here(paste0("Figure_folder/likelihood_table_", filename, ".png")), vwidth = 992, vheight = 300)
+likelihood_metrics <- as.data.frame(likelihood_metrics) %>%
+  select(model, AIC_scores, delta_AIC) 
 
-likelihood_metrics <- as.data.frame(likelihood_metrics) %>% 
-  mutate(model_comparison = paste0(round(delta_AIC, digits = 2), " (", round(AIC_scores, digits = 2), ")")) %>%
-  select(model_comparison, model) %>%
+likelihood_metrics$model <- str_remove(likelihood_metrics$model, pattern = "_model") 
+likelihood_metrics$model <- str_replace(likelihood_metrics$model, pattern = "bridge_only", replacement = "ARD-bridge")
+likelihood_metrics$model <- str_replace(likelihood_metrics$model, pattern = "CONSYM", replacement = "SYM-bridge")
+colnames(likelihood_metrics) <- c("Model", "AIC_score", "delta AIC")
+
+knitr::kable(likelihood_metrics, format = "html", digits = 2) %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("likelihood_table.html")
+webshot("likelihood_table.html", file = here(paste0("Figure_folder/likelihood_table_long", filename, ".png")), vwidth = 300, vheight = 300)
+
+likelihood_metrics <- likelihood_metrics %>% mutate(model_comparison = paste0(round(delta_AIC, digits = 2), " (", round(AIC_scores, digits = 2), ")")) %>%
   pivot_wider(names_from = model, values_from = model_comparison) 
 
-colnames(likelihood_metrics) <- c("ER", "SYM", "bridge-SYM", "ARD", "bridge-ARD")
-
 knitr::kable(likelihood_metrics, format = "html", digits = 2, caption = "Model_comparison \n AIC score difference (AIC score)") %>%  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F) %>% save_kable("likelihood_table.html")
-webshot("likelihood_table.html", file = here(paste0("Figure_folder/likelihood_table_long_", filename, ".png")), vwidth = 992, vheight = 300)
+webshot("likelihood_table.html", file = here(paste0("Figure_folder/likelihood_table_wide_", filename, ".png")), vwidth = 992, vheight = 300)
+
 
 # Section 2: max_clade_cred rates ---------------------------
 
@@ -78,12 +83,12 @@ ggplot(df_full, aes(x = model, y = AIC_score, fill = model)) +
   scale_fill_manual(values = custom.colours) +
   ggdist::stat_halfeye(alpha = 0.6, adjust = .5, width = .6, justification = -.3, .width = 0, point_colour = NA) +
   geom_boxplot(alpha = 0.2, width = .25, colour = "black" ,outlier.shape = NA) +
-  geom_point(aes(color = model), stroke = 1, size = 1, alpha = .2, position = position_jitter(seed = 1, width = .15)) +
+  geom_point(aes(color = model), size = 1, alpha = .2, position = position_jitter(seed = 1, width = .15)) +
   scale_color_manual(values = custom.colours) + 
   geom_text(data = means, aes(label = delta_AIC, y = AIC_score), hjust = -0.35, size = 3) +
   labs(x = "Model", y = "AIC score")  + theme_bw() +
   scale_x_discrete(labels = c("ER", "SYM", "SYM-bridge", "ARD", "ARD-bridge"), expand = expansion(0,0.3)) +
-  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 11), legend.position = "none")
+  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 11), legend.position = "none",  panel.grid.minor = element_blank())
 
 whippo_plot
 
@@ -110,20 +115,22 @@ ruminant_plot <-
   scale_fill_manual(values = custom.colours) +
   ggdist::stat_halfeye(alpha = 0.6, adjust = .5, width = .6, justification = -.3, .width = 0, point_colour = NA) +
   geom_boxplot(alpha = 0.2, width = .25, colour = "black",outlier.shape = NA) + 
-  geom_point(aes(color = model), stroke = 1, size = 1, alpha = .2, position = position_jitter(seed = 1, width = .15)) +
+  geom_point(aes(color = model), size = 1, alpha = .2, position = position_jitter(seed = 1, width = .15)) +
   scale_color_manual(values = custom.colours) + 
-  geom_text(data = means, aes(label = delta_AIC, y = AIC_score), hjust = -0.35, size = 3) +
+  geom_text(data = means, aes(label = delta_AIC, y = AIC_score), hjust = c(-0.3, rep(-0.35, 4)), size = 3) +
   labs(x = "Model", y = "AIC score")  + theme_bw() +
   scale_x_discrete(labels = c("ER", "SYM", "SYM-bridge", "ARD", "ARD-bridge"), expand = expansion(0,0.3)) +
-  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 11), legend.position = "none") + coord_cartesian(ylim = c(398, 525)) #there is one extreme outlier in the ER models of 564
+  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 11), legend.position = "none", panel.grid.minor = element_blank()) + 
+  coord_cartesian(ylim = c(398, 525)) #there is one extreme outlier in the ER models of 564
 
 ruminant_plot
 
 #save out
-pdf(here("Figure_folder/model_boxplots.pdf"), width = 3.3, height = 5)
-(whippo_plot + theme(axis.title.x = element_text(colour = "white", size = 1), axis.text.x = element_text(angle = 30, vjust = 0.75)))/
-  (ruminant_plot + theme(axis.text.x = element_text(angle = 30, vjust = 0.75)))
-dev.off()
+# pdf(here("Figure_folder/model_boxplots.pdf"), width = 3.3, height = 6)
+# (whippo_plot + theme(axis.title.x = element_text(colour = "white", size = 1), axis.text.x = element_text(angle = 30, vjust = 0.75)))/
+#   (ruminant_plot + theme(axis.text.x = element_text(angle = 30, vjust = 0.75)))
+# dev.off()
+
  
 # Section 5: Density plot of transition rates (bridge-ARD) ----------------------------------------
 
@@ -146,7 +153,7 @@ whippo_bridge_rates_density_ridges <-
   #scale_fill_viridis_d(option = "C") +
   scale_fill_manual(values = ridges_palette_10) + 
   scale_y_discrete(labels = function(l) parse(text=l), expand = expansion(add = c(0.5, 1.6))) + xlab("Log (transition rates)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.title.x = element_text(size = 11), axis.title.y = element_blank(),
+  theme_classic() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.title.x = element_text(size = 11), axis.title.y = element_blank(),
                      strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = "transparent"), 
                      plot.background = element_rect(fill='transparent', color=NA), panel.grid = element_blank())
 
@@ -162,19 +169,38 @@ rumi_bridge_rates_density_ridges <-
   ggridges::geom_density_ridges(bandwidth = 1, scale = 2, show.legend = FALSE, jittered_points = FALSE, point_shape = 21, point_size = 1, point_alpha = 0.2, inherit.aes = TRUE) +
   scale_fill_manual(values = ridges_palette_10) + 
   scale_y_discrete(labels = function(l) parse(text=l), expand = expansion(add = c(0.5, 1.75))) + xlab("Log (transition rates)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.title.y = element_blank(), axis.title = element_text(size = 12),
+  theme_classic() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.title.y = element_blank(), axis.title = element_text(size = 12),
                      strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = "transparent"), 
                      plot.background = element_rect(fill='transparent', color=NA), panel.grid = element_blank())
 
-#save out
-pdf(here("Figure_folder/transition_rates_density_ridges_bridge-ARD.pdf"), width = 3.25, height = 5.5)
-(whippo_bridge_rates_density_ridges + theme(axis.title.x = element_text(colour = "white", size = 1))) /
-  (rumi_bridge_rates_density_ridges)
+# #save out
+# pdf(here("Figure_folder/transition_rates_density_ridges_bridge-ARD.pdf"), width = 3.25, height = 5.5)
+# (whippo_bridge_rates_density_ridges + theme(axis.title.x = element_text(colour = "white", size = 1))) /
+#   (rumi_bridge_rates_density_ridges)
+# dev.off()
+
+pdf(here("Figure_folder/model_boxplots_whippo.pdf"), width = 3.5, height = 3.5)
+whippo_plot
 dev.off()
 
-# #pdf(here("Figure_folder/model_boxplots.pdf"), width = 6.85, height = 5.5)
-# ((whippo_plot + theme(axis.title.x = element_text(colour = "white", size = 1), axis.text.x = element_text(angle = 30, vjust = 0.75))) + whippo_bridge_rates_density_ridges + theme(axis.title.x = element_text(colour = "white", size = 1)))/
-#   ((ruminant_plot + theme(axis.text.x = element_text(angle = 30, vjust = 0.75)))+ rumi_bridge_rates_density_ridges)
+pdf(here("Figure_folder/model_boxplots_ruminants.pdf"), width = 3.5, height = 3.5)
+ruminant_plot
+dev.off()
+
+pdf(here("Figure_folder/transition_rates_density_ridges_bridge-ARD-whippo.pdf"), width = 4.8, height = 2.5)
+whippo_bridge_rates_density_ridges 
+dev.off()
+
+pdf(here("Figure_folder/transition_rates_density_ridges_bridge-ARD-ruminants.pdf"), width = 4.8, height = 2.5)
+rumi_bridge_rates_density_ridges
+dev.off()
+
+# pdf(here("Figure_folder/model_boxplots_rates_combined_whippo.pdf"), width = 8.5, height = 3.5)
+# (whippo_plot) + (whippo_bridge_rates_density_ridges/plot_spacer() + plot_layout(height= c(0.8, 0.2)))
+# dev.off()
+# 
+# pdf(here("Figure_folder/model_boxplots_rates_combined_ruminant.pdf"), width = 8.5, height = 3.5)
+# ruminant_plot + (rumi_bridge_rates_density_ridges/plot_spacer() + plot_layout(height= c(0.8, 0.2)))
 # dev.off()
 
 # Section 6: Density plot of transition rates (SYM, ARD) ----------------------------------
@@ -189,7 +215,7 @@ whippo_SYM_rates_density_ridges <-
   ggridges::geom_density_ridges(bandwidth = 1, scale = 2, show.legend = FALSE, alpha = 0.5, jittered_points = FALSE, point_shape = 21, point_size = 1, point_alpha = 0.2, inherit.aes = TRUE) +
   scale_fill_manual(values = ridges_palette_12) + 
   scale_y_discrete(labels = function(l) parse(text=l), expand = expansion(add = c(0.5, 1.6))) + xlab("Log (transition rates)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.title.x = element_text(size = 11), axis.text.y = element_text(size = 11), axis.title.y = element_blank(), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
+  theme_classic() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.title.x = element_text(size = 11), axis.text.y = element_text(size = 11), axis.title.y = element_blank(), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
 
 whippo_ARD_rates_density_ridges <-
   rates_df1 %>% filter(model == "ARD") %>%
@@ -199,7 +225,7 @@ whippo_ARD_rates_density_ridges <-
   ggridges::geom_density_ridges(bandwidth = 1, scale = 2, show.legend = FALSE, alpha = 0.5, jittered_points = FALSE, point_shape = 21, point_size = 1, point_alpha = 0.2, inherit.aes = TRUE) +
   scale_fill_manual(values = ridges_palette_12) + 
   scale_y_discrete(labels = function(l) parse(text=l), expand = expansion(add = c(0.5, 1.6))) + xlab("Log (transition rates)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.title.x = element_text(size = 11), axis.title.y = element_blank(), axis.text.y = element_blank(), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
+  theme_classic() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =9), axis.title.x = element_text(size = 11), axis.title.y = element_blank(), axis.text.y = element_blank(), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
 
 rumi_ARD_rates_density_ridges <-
   rates_df2 %>% filter(model == "ARD") %>% 
@@ -209,7 +235,7 @@ rumi_ARD_rates_density_ridges <-
   ggridges::geom_density_ridges(bandwidth = 1, scale = 2, show.legend = FALSE, alpha = 0.5, jittered_points = FALSE, point_shape = 21, point_size = 1, point_alpha = 0.2, inherit.aes = TRUE) +
   scale_fill_manual(values = ridges_palette_12) + 
   scale_y_discrete(labels = function(l) parse(text=l), expand = expansion(add = c(0.5, 2.2))) + xlab("Log (transition rates)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_blank(), axis.title.y = element_blank(), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
+  theme_classic() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_blank(), axis.title.y = element_blank(), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
 
 rumi_SYM_rates_density_ridges <-
   rates_df2 %>% filter(model == "SYM") %>% 
@@ -219,11 +245,11 @@ rumi_SYM_rates_density_ridges <-
   ggridges::geom_density_ridges(bandwidth = 1, scale = 2, show.legend = FALSE, alpha = 0.5, jittered_points = FALSE, point_shape = 21, point_size = 1, point_alpha = 0.2, inherit.aes = TRUE) +
   scale_fill_manual(values = ridges_palette_12) + 
   scale_y_discrete(labels = function(l) parse(text=l), expand = expansion(add = c(0.5, 2.2))) + xlab("Log (transition rates)") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size = 11), axis.title.y = element_blank(), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
+  theme_classic() + theme(axis.text.x = element_text(angle = 0, vjust = 0.5, size =10), axis.text.y = element_text(size = 11), axis.title.y = element_blank(), axis.title = element_text(size = 12), strip.background = element_rect(fill = "grey90"),  panel.background = element_rect(fill='transparent', colour = NA), plot.background = element_rect(fill='transparent', color=NA))
 
 
-pdf(here("Figure_folder/supplemental_rates_density_ridges_ARD_SYM.pdf"), width = 8.5, height = 7)
+pdf(here("Figure_folder/supplemental_rates_density_ridges_ARD_SYM.pdf"), width = 6.7, height = 7)
 (whippo_SYM_rates_density_ridges + whippo_ARD_rates_density_ridges) /
-  (rumi_SYM_rates_density_ridges + rumi_ARD_rates_density_ridges) + plot_annotation(tag_levels = 'a')
+  (rumi_SYM_rates_density_ridges + rumi_ARD_rates_density_ridges) #+ plot_annotation(tag_levels = 'a')
 dev.off() 
 

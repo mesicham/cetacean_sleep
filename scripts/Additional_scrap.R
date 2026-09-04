@@ -271,6 +271,53 @@ dev.off()
 
 
 
+# Section 4.0: Cetacean max latitude ---------------------------------------------------
+#family.colours <- c("dodgerblue",  "cyan","darkgreen", "springgreen", "darkolivegreen1", "gold", "orange", "firebrick2", "brown", "orchid1", "darkorchid")
+
+#select the variable we're looking at
+trait.data.1 <- trait.data[!is.na(trait.data$max_lat),]
+trait.data.1 <- trait.data.1[!is.na(trait.data.1$max_crep),]
+
+trait.data.1 <- filter(trait.data.1, Parvorder == "Odontoceti")
+
+#perform the phylogenetically corrected one-way anova
+phylANOVA <- calculatePhylANOVA(trait.data.1, "max_lat")
+
+cet_maxlat_boxplot <- ggplot(trait.data.1, aes(x = max_crep, y = max_lat)) + 
+  boxplot_format +
+  labs(x = "Temporal activity pattern", y = "Maximum latitude range") + 
+  annotate("text", x = 1.4, y = 100, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
+
+# Section 9.0: Ruminant max latitude ---------------------------------------------------
+#family.colours <- c("black","dodgerblue", "springgreen",  "gold", "firebrick2", "darkorchid")
+
+trait.data.art <- read.csv(here("artiodactyla_ecomorphology_dataset.csv"))
+#use below for IUCN data
+trait.data.art <- trait.data.art[!is.na(trait.data.art$max_lat), c("tips", "max_lat", "max_crep", "Family")]
+#use below for pantheria data
+#trait.data.art <- trait.data.art[!is.na(trait.data.art$GR_MaxLat_dd), c("tips", "GR_MaxLat_dd", "max_crep", "Family")]
+trait.data.art <- trait.data.art[!is.na(trait.data.art$max_crep), ] %>% filter(Family %in% c("Bovidae", "Cervidae", "Antilocapridae", "Giraffidae", "Tragulidae", "Moschidae"))
+
+#perform the phylogenetically corrected one-way anova
+#phylANOVA <- calculatePhylANOVA(trait.data.art, "GR_MaxLat_dd")
+phylANOVA <- calculatePhylANOVA(trait.data.art, "max_lat")
+
+#add p values manually
+stat.test <- data.frame(group1 = c("cathemeral", "cathemeral", "cathemeral", "crepuscular", "crepuscular", "diurnal"),
+                        group2 = c("crepuscular", "diurnal", "nocturnal", "diurnal", "nocturnal", "nocturnal"),
+                        p.adj = c(phylANOVA$Pt[2], phylANOVA$Pt[3], phylANOVA$Pt[4], phylANOVA$Pt[7], phylANOVA$Pt[8], phylANOVA$Pt[12]),
+                        y.position = c(80, 90, 100, 110, 120, 135))
+
+stat.test <- stat.test %>% add_x_position(x = "max_crep")
+
+rum_max_lat_boxplot <- ggplot(trait.data.art, aes(x = max_crep, y = max_lat)) + 
+  boxplot_format +
+  stat_pvalue_manual(stat.test, label = "p.adj", hjust = 0.7, size = 3) +
+  labs(x = "Temporal activity pattern", y = "Maximum latitude range") + 
+  annotate("text", x = 1.4, y = 135, label = paste("phylANOVA, p =", phylANOVA$Pf)) 
+
+rum_max_lat_boxplot
+
 # Cetacean dive data in detail ---------------------------------------------------
 
 dive.data <- read.csv(here("cetacean_dive_depth_all_sources.csv"))
