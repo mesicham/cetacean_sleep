@@ -141,7 +141,7 @@ Manger <- Manger[, c("Average_body_mass", "Brain_mass", "Encephalization_quotien
 #drop row with Delphinus_capensis
 Manger <- Manger[-c(18), ]
 
-# Section 6: IUCN cetacean latitude ----------------------------------------------
+# Section 6: IUCN cetacean latitude (optional, saved as RDS object) ----------------------------------------------
 
 #data downloaded directly from IUCN website in shapefile format, data on 86 species
 range <- read_sf(here("ecomorphological_traits/redlist_species_data_b8eeb8cf-3383-4314-bfb2-55dad2b8fec3/data_0.shp"))
@@ -171,6 +171,9 @@ lat.df <- pivot_wider(lat.df, names_from = minmax, values_from = coords)
 colnames(lat.df) <- c("Species_name", "min_lat", "max_lat")
 lat.df$tips <- str_replace(lat.df$Species_name, pattern = " ", replacement = "_")
 lat.df$mean_lat <- (lat.df$min_lat + lat.df$max_lat)/2
+
+#save out 
+saveRDS(lat.df, here("cetacean_IUCN_range_data.rds"))
 
 # Section 7: Churchill qualitative variables ------------------------------
 
@@ -268,6 +271,9 @@ dive.data <- dive.data[, c("tips", "Final_dive_depth", "Mean_dive_depth")]
 dive.data <- filter(dive.data, !is.na(Final_dive_depth))
 
 # Section 10: One cetacean dataframe to rule them all -------------------------------
+
+#read in range data
+lat.df <- readRDS(here("cetacean_IUCN_range_data.rds"))
 
 #merge trait datasets into one dataframe
 trait.data <- merge(church_pt2[, c("Dive_duration", "Mass", "Total_body_length", "tips")], church_pt1, by = "tips", all = TRUE)
@@ -397,7 +403,6 @@ for(i in 1:nrow(trait.data)){
 trait.data <- trait.data[, c("tips", "Dive_duration", "Total_body_length", "Orbit_ratio", "Diet", "Brain_mass", "Encephalization_quotient", "Longevity_days", "Sexual_maturity_days", "Group_size", "IUCN",  "Final_dive_depth", "Mean_dive_depth", "Final_body_mass_kg", "Average_body_mass_kg", "Final_habitat", "Final_feeding","Final_divetype", "Species_name", "max_lat", "mean_lat")]
 colnames(trait.data) <- c("tips", "Dive_duration", "Body_length_m", "Orbit_ratio", "Diet", "Brain_mass_g", "Encephalization_quotient", "Longevity_days", "Sexual_maturity_days", "Group_size", "IUCN", "Dive_depth_m", "Mean_dive_depth_m", "Body_mass_kg", "Average_body_mass_kg", "Habitat", "Feeding_method",  "Divetype", "Species_name", "max_lat", "mean_lat")
 
-
 #lastly add in the activity patterns
 cetaceans_full <- read.csv(here("cetaceans_full.csv"))
 cetaceans_full <- cetaceans_full[, c("Parvorder", "Family", "Diel_Pattern", "max_crep", "Confidence", "tips")]
@@ -457,6 +462,9 @@ colnames(lat.df) <- c("Species_name", "min_lat", "max_lat")
 lat.df$tips <- str_replace(lat.df$Species_name, pattern = " ", replacement = "_")
 lat.df$mean_lat <- (lat.df$min_lat + lat.df$max_lat)/2
 
+#save out 
+saveRDS(lat.df, here("artio_IUCN_range_data.rds"))
+
 # Section 13: Artiodactyla pantheria data ---------------------------------
 
 # library(pak)
@@ -501,8 +509,6 @@ pantheria[pantheria$tips == "Taurotragus_oryx", "tips"] <- "Tragelaphus_oryx"
 #Babyrousa_bolabatuensis only known from subfossil remains, may be a subspecies
 
 # Section 14: One ruminant dataset to rule them all -------------------------
-artio_eyes <- read.csv(here("ecomorphological_traits\\ruminant_eye_df.csv"))
-pantheria <- read.csv(here("ecomorphological_traits\\ruminant_pantheria_df.csv"))
 sleepy_artio <- read.csv(here("Sleepy_artiodactyla_full.csv"))
 
 sleepy_artio <- sleepy_artio[, c("tips", "max_crep", "Diel_Pattern")]
@@ -512,6 +518,7 @@ pantheria <- merge(sleepy_artio, pantheria, by = "tips", all = TRUE)
 artio_eyes <- merge(pantheria, artio_eyes, by = "tips", all = TRUE)
 
 #add in IUCN latitude data
+lat.df <- readRDS(here("artio_IUCN_range_data.rds"))
 artio_eyes <- merge(artio_eyes, lat.df, by = "tips", all = TRUE)
 
 #save out 

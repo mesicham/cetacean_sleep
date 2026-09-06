@@ -13,6 +13,7 @@ library(tidyr)
 library(lubridate)
 library(suncalc)
 library(ggplot2)
+library(patchwork)
 setwd(here())
 #to find sunset sunrise times
 #install.packages("suntools")
@@ -95,7 +96,7 @@ ggplot(hyper, aes(y = Signal_count, x = Start_time)) +
   scale_x_continuous(breaks = c(0,5,10,15,20,25)) + 
   labs(x = "Hour", y = "Signal count") +
   geom_smooth(method = "loess", formula = "y~x", colour = "black") +
-  ggtitle("Hyperoodon planifrons") + theme(plot.title = element_text(size = 11))
+  ggtitle("Hyperoodon planifrons") + theme(plot.title = element_text(size = 11, face = "italic"))
 
 ###new hyperoodon data from Barlow et al, 2021
 #https://doi.org/10.1016/j.dsr2.2021.104973
@@ -166,7 +167,7 @@ ggplot(hyper2, aes(y = Signal_count, x = Start_time)) +
   scale_x_continuous(breaks = c(0, 5, 10, 20, 25)) +
   labs(x = "Hour", y = "Signal count") +
   geom_smooth(method = "loess", formula = "y~x", colour = "black") +
-  ggtitle("Hyperoodon planifrons") + theme(plot.title = element_text(size = 11))
+  ggtitle("Hyperoodon planifrons") + theme(plot.title = element_text(size = 11, face = "italic"))
 
 #study took place in  Falkland Islands to the South Sandwich Islands and South Georgia from December 30, 2019 to January 29, 2020 (Leg 1)
 #only one detection occurred on the second leg of the trip from King George Island to Puerto Williams, Chile via the Antarctic Peninsula from February 11 to 27, 2020 (Leg 2)
@@ -239,7 +240,7 @@ vaquita_plot <-
   annotate(geom = "rect", xmin = 0, xmax = 5, ymin = -Inf, ymax = Inf, fill = "grey") +
   annotate(geom = "rect", xmin = 20.25, xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey") +
   labs(x = "Hour", y = "Density of detections") +
-  geom_density(size = 1) + ggtitle("Phocoena sinus") + theme(plot.title = element_text(size = 11))
+  geom_density(size = 1) + ggtitle("Phocoena sinus") + theme(plot.title = element_text(size = 11, face = "italic"))
    
 # pdf(here("Figure_folder/Phoeca_sinus_activity_pattern.pdf"), width = 5, height = 3)
 # vaquita_plot
@@ -306,7 +307,7 @@ impala_plot <-
   annotate(geom = "rect", xmin = 0, xmax = mean(impala$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(impala$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   labs(x = "Hour", y = "Density of detections") + 
-  geom_density(size = 1) + ggtitle("Aepyceros melampus")  + theme(plot.title = element_text(size = 11))
+  geom_density(size = 1) + ggtitle("Aepyceros melampus")  + theme(plot.title = element_text(size = 11, face = "italic"))
 
 #Greater kudu Tragelaphus strepsiceros
 kudu <- camera_trap.df %>% filter(snapshotName == "kudu")
@@ -319,7 +320,7 @@ kudu_plot <-
   annotate(geom = "rect", xmin = 0, xmax = mean(kudu$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(kudu$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   labs(x = "Hour", y = "Density of detections") +
-  geom_density(size = 1) + ggtitle("Tragelaphus strepsiceros")  + theme(plot.title = element_text(size = 11))
+  geom_density(size = 1) + ggtitle("Tragelaphus strepsiceros")  + theme(plot.title = element_text(size = 11, face = "italic"))
 
 #Blue wildebeest Connochaetes taurinus
 blue <- camera_trap.df %>% filter(snapshotName == "wildebeestblue")
@@ -332,9 +333,9 @@ blue_plot <-
   annotate(geom = "rect", xmin = 0, xmax = mean(blue$dawn_start), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(blue$dusk_end), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   labs(x = "Hour", y = "Density of detections") +
-  geom_density(size = 1) + ggtitle("Connochaetes taurinus")  + theme(plot.title = element_text(size = 11))
+  geom_density(size = 1) + ggtitle("Connochaetes taurinus")  + theme(plot.title = element_text(size = 11, face = "italic"))
 
-# Section 4: Beaked whale HARP data ----------------------------------------------------
+# Section 4: Beaked whale HARP data processing (optional)----------------------------------------------------
 
 #this is passive acoustic monitoring data on rare beaked whale species from dryad
 #https://doi.org/10.5061/dryad.gf1vhhmw0
@@ -534,6 +535,10 @@ detections$location <- str_replace_all(detections$location, c("disk10" ="Jackson
 #save out as RDS file to back up to github
 saveRDS(detections, file = here("Artiodactyla_activity_data/Solsona-Berga_2024_final.rds"))
 
+
+# Section 4.5 Beaked whale HARP data plotting ----------------------------------------------------
+
+
 #use below
 detections <- readRDS(here("Artiodactyla_activity_data/Solsona-Berga_2024_final.rds"))
 
@@ -548,10 +553,10 @@ all_sps_plot <-  detections %>% filter(location != "Bermuda") %>%
   annotate(geom = "rect", xmin = mean(detections$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   geom_density(size = 1) +
   labs(x = "Hour", y = "Density of detections") + ggtitle("Kogia sima                                Mesoplodon europaeus            Mesoplodon mirus") +
-  facet_wrap(~Species, scales = "free") + theme(strip.text = element_blank(), plot.title = element_text(size = 11))
+  facet_wrap(~Species, scales = "free") + theme(strip.text = element_blank(), plot.title = element_text(size = 11, face = "italic"))
 
 
-# Section 5: Narwhal ---------------------------------------------------------
+# Section 5: Narwhal data processing (optional) ---------------------------------------------------------
 
 #### Narwhals https://www.science.org/doi/10.1126/sciadv.ade0440?adobe_mc=MCMID%3D53649406453315412110550155571971043555%7CMCORGID%3D242B6472541199F70A4C98A6%2540AdobeOrg%7CTS%3D1695155886#supplementary-materials
 
@@ -599,6 +604,10 @@ narwhal <- cbind(narwhal, sun_times[, -c(1)])
 #save out as RDS file to back up to github
 saveRDS(narwhal, file = here("Artiodactyla_activity_data/Tervo_2023_final.rds"))
 
+
+# Section 5.5 Narwhal data plotting ---------------------------------------
+
+
 #use below
 narwhal <- readRDS(here("Artiodactyla_activity_data/Tervo_2023_final.rds"))
 
@@ -614,7 +623,7 @@ narwhal_PAM <-
   annotate(geom = "rect", xmin = mean(narwhal$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   geom_density(size = 1) + 
   labs(y = "Density of detections", x = "Hour") +
-  ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11))
+  ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11, face = "italic"))
 
 
 #plot depth vs time 
@@ -634,7 +643,7 @@ narwhal_dive <-
   annotate(geom = "rect", xmin = 0, xmax = mean(mean_dive$dawn_start, na.rm = TRUE), ymin = -Inf, ymax = Inf, fill = "grey70") +
   annotate(geom = "rect", xmin = mean(mean_dive$dusk_end, na.rm = TRUE), xmax = 24, ymin = -Inf, ymax = Inf, fill = "grey70") +
   labs(x = "Hour", y = "Average depth") +
-  geom_smooth(method = "loess", formula = "y~x") + ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11))
+  geom_smooth(method = "loess", formula = "y~x") + ggtitle("Monodon monoceros") + theme(plot.title = element_text(size = 11, face = "italic"))
 
 
 #does average depth vary with time of day?
